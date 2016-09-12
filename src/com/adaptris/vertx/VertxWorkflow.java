@@ -72,9 +72,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       
       processingQueue.put(translatedMessage);
     } catch (CoreException e) {
-      e.printStackTrace();
+      log.error("Error processing message: ", e);
+      handleBadMessage(msg);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      log.error("Error processing message: ", e);
+      handleBadMessage(msg);
     }
   }
   
@@ -88,7 +90,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
       nextService = vxMessage.getServiceRecord().getNextService();
     } catch (CoreException | ServiceRecordException e) {
-      e.printStackTrace();
+      log.error("Error translating incoming message.", e);
     }
     if(vxMessage.getServiceRecord().getLastRunService() != null) {
       if(vxMessage.getServiceRecord().getLastRunService().getState().equals(ServiceState.ERROR)) {
@@ -196,8 +198,6 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   public void handle(Message<VertXMessage> event) {
     if(event.body() != null)
       this.onVertxMessage(event);
-    else
-      System.out.println("Null body received.");
   }
   
   private Service getServiceById(String id) {
