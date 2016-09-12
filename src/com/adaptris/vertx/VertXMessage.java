@@ -11,6 +11,8 @@ public class VertXMessage {
     
   private ServiceRecord serviceRecord;
   
+  private long startProcessingTime;
+  
   public VertXMessage() {
     serviceRecord = new ServiceRecord();
   }
@@ -42,6 +44,24 @@ public class VertXMessage {
 
   public void setServiceRecord(ServiceRecord serviceRecord) {
     this.serviceRecord = serviceRecord;
+  }
+
+  public long getStartProcessingTime() {
+    return startProcessingTime;
+  }
+
+  public void setStartProcessingTime(long startProcessingTime) {
+    this.startProcessingTime = startProcessingTime;
+  }
+  
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Start processing at :" + this.getStartProcessingTime());
+    builder.append("\n");
+    builder.append("Service Record :\n" + this.getServiceRecord());
+    builder.append("\n");
+    builder.append("\n");
+    return builder.toString();
   }
 
 }

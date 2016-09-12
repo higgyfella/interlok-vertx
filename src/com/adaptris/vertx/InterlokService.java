@@ -9,6 +9,14 @@ public class InterlokService {
   private ServiceState state;
   private Exception exception;
   
+  public InterlokService() {
+    // no arg for marshalling
+  }
+  
+  public InterlokService(String id) {
+    this(id, ServiceState.NOT_STARTED);
+  }
+  
   public InterlokService(String id, ServiceState state) {
     this.setId(id);
     this.setState(state);
@@ -46,5 +54,16 @@ public class InterlokService {
 
   public void setException(Exception exception) {
     this.exception = exception;
+  }
+  
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Id: " + this.getId());
+    builder.append("  :::  ");
+    builder.append("State: " + this.getState().name());
+    builder.append("  :::  ");
+    builder.append("Exception?: " + (this.getException() != null));
+    
+    return builder.toString();
   }
 }

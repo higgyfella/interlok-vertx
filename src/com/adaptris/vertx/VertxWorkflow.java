@@ -8,6 +8,11 @@ import java.util.concurrent.TimeUnit;
 
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
+import com.adaptris.core.DefaultSerializableMessageTranslator;
+import com.adaptris.core.ProduceException;
+import com.adaptris.core.SerializableAdaptrisMessage;
+import com.adaptris.core.Service;
+import com.adaptris.core.ServiceException;
 import com.adaptris.core.StandardWorkflow;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -29,7 +34,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   private VertXMessageTranslator vertXMessageTranslator;
   
-  private MessageCodec<?, ?> messageCodec;
+  private MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
   
@@ -42,6 +47,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   private transient EventBus eventBus;
   
   private transient VertxWorkflow handler;
+  
+  private transient DefaultSerializableMessageTranslator serializableMessageTranslator;
 
   public VertxWorkflow() {
     super();
@@ -50,13 +57,18 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     processingQueue = new ArrayBlockingQueue<>(this.getQueueCapacity(), false);
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
     handler = this;
+    serializableMessageTranslator = new DefaultSerializableMessageTranslator();
   }
   
   @Override
   public void onAdaptrisMessage(AdaptrisMessage msg) {
     try {
+      workflowStart(msg);
+      log.debug("start processing msg [" + msg.toString(false) + "]");
+      
       VertXMessage translatedMessage = this.getVertXMessageTranslator().translate(msg);
       translatedMessage.setServiceRecord(new ServiceRecord(this.getServiceCollection()));
+      translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
       processingQueue.put(translatedMessage);
     } catch (CoreException e) {
@@ -67,7 +79,59 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   }
   
   public void onVertxMessage(Message<VertXMessage> xMessage) {
-    
+    log.trace("Incoming message: " + xMessage);
+    AdaptrisMessage adaptrisMessage = null;
+    InterlokService nextService = null;
+    VertXMessage vxMessage = null;
+    try {
+      vxMessage = xMessage.body();
+      adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
+      nextService = vxMessage.getServiceRecord().getNextService();
+    } catch (CoreException | ServiceRecordException e) {
+      e.printStackTrace();
+    }
+    if(vxMessage.getServiceRecord().getLastRunService() != null) {
+      if(vxMessage.getServiceRecord().getLastRunService().getState().equals(ServiceState.ERROR)) {
+        this.handleBadMessage(adaptrisMessage);
+        return ;
+      }
+    }
+    if(nextService != null) { // finished?
+      Service service = this.getServiceById(nextService.getId());
+      try {
+        service.doService(adaptrisMessage);
+        nextService.setState(ServiceState.COMPLETE);
+        vxMessage.getServiceRecord().setLastServiceId(service.getUniqueId());
+        SerializableAdaptrisMessage serializableMessage = (SerializableAdaptrisMessage) serializableMessageTranslator.translate(adaptrisMessage);
+        vxMessage.setAdaptrisMessage(serializableMessage);
+      } catch (Exception exception) {
+        log.error("Error running service.", exception);
+        nextService.setState(ServiceState.ERROR);
+        nextService.setException(exception);
+      } finally {
+        try {
+          log.trace("Processed message, putting back on the queue: " + vxMessage);
+          this.processingQueue.put(vxMessage);
+        } catch (InterruptedException e) {
+          log.error("Could not place message on the processing queue.  Probably shutting down.");
+        }
+      }
+    } else {
+      // finished processing.
+      try {
+        doProduce(adaptrisMessage);
+        logSuccess(adaptrisMessage, xMessage.body().getStartProcessingTime());
+      } catch (ServiceException e) {
+        handleBadMessage("Exception from ServiceCollection", e, adaptrisMessage);
+      } catch (ProduceException e) {
+        adaptrisMessage.addEvent(getProducer(), false); // generate event
+        handleBadMessage("Exception producing msg", e, adaptrisMessage);
+        handleProduceException();
+      } finally {
+        sendMessageLifecycleEvent(adaptrisMessage);
+      }
+      workflowEnd(adaptrisMessage, adaptrisMessage);
+    }
   }
 
   @Override
@@ -99,36 +163,52 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
         eventBus = vertX.eventBus();
         eventBus.registerDefaultCodec(VertXMessage.class, getMessageCodec());
         eventBus.consumer(getUniqueId(), handler);
+        
+        Runnable messageProcessorRunnable = new Runnable() {
+          @Override
+          public void run() {
+            boolean interrupted = false;
+            while((!messageExecutorHandle.isDone()) && (!interrupted)) {
+              try {
+                processQueuedMessage();
+              } catch (InterruptedException e) {
+                interrupted = true;
+              }
+            }
+          }
+        };
+        
+        messageExecutorHandle = messageExecutor.submit(messageProcessorRunnable);
       }
     });
-    
-    
-    Runnable messageProcessorRunnable = new Runnable() {
-      @Override
-      public void run() {
-        boolean interrupted = false;
-        while((!messageExecutorHandle.isDone()) && (!interrupted)) {
-          try {
-            processQueuedMessage();
-          } catch (InterruptedException e) {
-            interrupted = true;
-          }
-        }
-      }
-    };
-    
-    messageExecutorHandle = messageExecutor.submit(messageProcessorRunnable);
+
   }
 
   private void processQueuedMessage() throws InterruptedException {
     VertXMessage xMessage = processingQueue.poll(1L, TimeUnit.SECONDS);
-    
-    // send it to vertx
-    try {
-      eventBus.send(this.getUniqueId(), this.getVertXMessageTranslator().toVertxMessage(xMessage));
-    } catch (CoreException e) {
-      e.printStackTrace();
+    if(xMessage != null) {
+      // send it to vertx
+      eventBus.send(this.getUniqueId(), xMessage);
     }
+  }
+  
+  @Override
+  public void handle(Message<VertXMessage> event) {
+    if(event.body() != null)
+      this.onVertxMessage(event);
+    else
+      System.out.println("Null body received.");
+  }
+  
+  private Service getServiceById(String id) {
+    Service result = null;
+    for(Service service : this.getServiceCollection().getServices()) {
+      if(service.getUniqueId().equals(id)) {
+        result = service;
+        break;
+      }
+    }
+    return result;
   }
   
   @Override
@@ -165,16 +245,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.vertXMessageTranslator = vertXMessageTranslator;
   }
 
-  @Override
-  public void handle(Message<VertXMessage> event) {
-    this.onVertxMessage(event);
-  }
-
-  public MessageCodec<?, ?> getMessageCodec() {
+  public MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
     return messageCodec;
   }
 
-  public void setMessageCodec(MessageCodec<?, ?> messageCodec) {
+  public void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
     this.messageCodec = messageCodec;
   }
 

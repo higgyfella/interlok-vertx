@@ -29,7 +29,7 @@ public class ServiceRecord {
   
   public InterlokService getLastRunService() {
     if(!StringUtils.isEmpty(this.lastServiceId)) {
-      int indexOfLastService = this.services.indexOf(this.lastServiceId);
+      int indexOfLastService = this.services.indexOf(new InterlokService(this.lastServiceId));
       if(indexOfLastService >= 0) {
         return this.services.get(indexOfLastService);
       }
@@ -50,7 +50,7 @@ public class ServiceRecord {
   
   public InterlokService getNextService() throws ServiceRecordException {
     if(!StringUtils.isEmpty(this.lastServiceId)) {
-      int indexOfLastService = this.services.indexOf(this.lastServiceId);
+      int indexOfLastService = this.services.indexOf(new InterlokService(this.lastServiceId));
       if(indexOfLastService >= 0) {
         if(services.size() > (indexOfLastService + 1)) {
           return services.get(indexOfLastService + 1); 
@@ -66,4 +66,20 @@ public class ServiceRecord {
     }
   }
   
+  public String toString() {
+    StringBuilder builder = new StringBuilder();
+    for(InterlokService service : services) {
+      builder.append(service.toString());
+      builder.append("\n");
+    }
+    return builder.toString();
+  }
+
+  public String getLastServiceId() {
+    return lastServiceId;
+  }
+
+  public void setLastServiceId(String lastServiceId) {
+    this.lastServiceId = lastServiceId;
+  }
 }

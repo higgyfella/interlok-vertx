@@ -1,6 +1,8 @@
 package com.adaptris.vertx;
 
 import org.apache.activemq.util.ByteArrayInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.adaptris.core.AdaptrisMarshaller;
 import com.adaptris.core.CoreException;
@@ -12,6 +14,8 @@ import io.vertx.core.eventbus.MessageCodec;
 
 @XStreamAlias("adaptris-message-codec")
 public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMessage> {
+  
+  protected transient Logger log = LoggerFactory.getLogger(this.getClass().getName());
   
   private static final String CODEC_NAME = "AdaptrisVertXMessageCodec";
   
@@ -38,7 +42,8 @@ public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMes
   @Override
   public VertXMessage decodeFromWire(int pos, Buffer buffer) {
     try {
-      return (VertXMessage) marshaller.unmarshal(new ByteArrayInputStream(buffer.getBytes()));
+      log.debug("Received bytes: " + buffer.getBytes(pos, buffer.length()));
+      return (VertXMessage) marshaller.unmarshal(new ByteArrayInputStream(buffer.getBytes(pos, buffer.length())));
     } catch (CoreException e) {
       e.printStackTrace();
     }
@@ -47,8 +52,7 @@ public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMes
 
   @Override
   public VertXMessage transform(VertXMessage xMessage) {
-    
-    return null;
+    return xMessage;
   }
 
   @Override
