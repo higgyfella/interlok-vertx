@@ -42,7 +42,6 @@ public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMes
   @Override
   public VertXMessage decodeFromWire(int pos, Buffer buffer) {
     try {
-      log.debug("Received bytes: " + buffer.getBytes(pos, buffer.length()));
       return (VertXMessage) marshaller.unmarshal(new ByteArrayInputStream(buffer.getBytes(pos, buffer.length())));
     } catch (CoreException e) {
       e.printStackTrace();

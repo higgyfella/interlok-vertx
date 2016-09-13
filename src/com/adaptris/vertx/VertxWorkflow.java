@@ -58,7 +58,6 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     super();
     this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
     this.setMessageCodec(new AdaptrisMessageCodec());
-    processingQueue = new ArrayBlockingQueue<>(this.getQueueCapacity(), false);
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
     handler = this;
     serializableMessageTranslator = new DefaultSerializableMessageTranslator();
@@ -74,7 +73,10 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       translatedMessage.setServiceRecord(new ServiceRecord(this.getServiceCollection()));
       translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
+      log.trace("New message [" + msg.getUniqueId() + "] ::: Queue slots available: " +  processingQueue.remainingCapacity());
       processingQueue.put(translatedMessage);
+      log.trace("New queue size : " +  processingQueue.remainingCapacity());
+      this.reportQueue("new message put [" + msg.getUniqueId() + "]");
     } catch (CoreException e) {
       log.error("Error processing message: ", e);
       handleBadMessage(msg);
@@ -85,13 +87,13 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   }
   
   public void onVertxMessage(Message<VertXMessage> xMessage) {
-    log.trace("Incoming message: " + xMessage);
     AdaptrisMessage adaptrisMessage = null;
     InterlokService nextService = null;
     VertXMessage vxMessage = null;
     try {
       vxMessage = xMessage.body();
       adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
+      log.trace("Incoming message: " + adaptrisMessage.getUniqueId());
       nextService = vxMessage.getServiceRecord().getNextService();
     } catch (CoreException | ServiceRecordException e) {
       log.error("Error translating incoming message.", e);
@@ -116,8 +118,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
         nextService.setException(exception);
       } finally {
         try {
-          log.trace("Processed message, putting back on the queue: " + vxMessage);
+          log.trace("Processed message (" + vxMessage.getAdaptrisMessage().getUniqueId() + "), putting back on the queue: " + vxMessage);
           this.processingQueue.put(vxMessage);
+          this.reportQueue("after service put [" + vxMessage.getAdaptrisMessage().getUniqueId() + "]");
         } catch (InterruptedException e) {
           log.error("Could not place message on the processing queue.  Probably shutting down.");
         }
@@ -146,6 +149,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     
     if(this.getVertXMessageTranslator() == null)
       this.setVertXMessageTranslator(new VertXMessageTranslator());
+    
+    processingQueue = new ArrayBlockingQueue<>(this.getQueueCapacity(), true);
   }
 
   @Override
@@ -193,7 +198,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
 
   private void processQueuedMessage() throws InterruptedException {
     VertXMessage xMessage = processingQueue.poll(1L, TimeUnit.SECONDS);
+    
     if(xMessage != null) {
+      this.reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
       // send it to vertx
       eventBus.send(this.getUniqueId(), xMessage);
     }
@@ -264,4 +271,15 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.messageCodec = messageCodec;
   }
 
+  private void reportQueue(String title) {
+    StringBuilder builder = new StringBuilder();
+    builder.append("\nCurrent Queue State (" + title + "):\n");
+    
+    VertXMessage[] array = new VertXMessage[processingQueue.size()];
+    array = (VertXMessage[]) this.processingQueue.toArray(array);
+    for(VertXMessage message : array) {
+      builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
+    }
+    log.trace(builder.toString());
+  }
 }
