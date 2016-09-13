@@ -14,6 +14,10 @@ import com.adaptris.core.SerializableAdaptrisMessage;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.StandardWorkflow;
+import com.adaptris.core.licensing.License;
+import com.adaptris.core.licensing.License.LicenseType;
+import com.adaptris.core.licensing.LicenseChecker;
+import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
@@ -26,7 +30,7 @@ import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageCodec;
 
 @XStreamAlias("vertx-workflow")
-public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>> {
+public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, LicensedComponent {
   
   private static final int DEFAULT_QUEUE_SIZE = 100;
   
@@ -146,6 +150,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
 
   @Override
   protected void prepareWorkflow() throws CoreException {
+    LicenseChecker.newChecker().checkLicense(this);
     super.prepareWorkflow();
   }
 
@@ -212,6 +217,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   }
   
   @Override
+  public boolean isEnabled(License license) {
+    return license.isEnabled(LicenseType.Standard);
+  }
+  
+  @Override
   protected void stopWorkflow() {
     super.stopWorkflow();
     if(messageExecutorHandle != null)
@@ -228,6 +238,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
         messageExecutorHandle.cancel(true);
     }
   }
+  
 
   public int getQueueCapacity() {
     return queueCapacity;
