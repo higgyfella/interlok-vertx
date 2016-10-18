@@ -8,9 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
-import com.adaptris.core.DefaultSerializableMessageTranslator;
 import com.adaptris.core.ProduceException;
-import com.adaptris.core.SerializableAdaptrisMessage;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.StandardWorkflow;
@@ -19,6 +17,8 @@ import com.adaptris.core.licensing.License.LicenseType;
 import com.adaptris.core.licensing.LicenseChecker;
 import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.ManagedThreadFactory;
+import com.adaptris.interlok.InterlokException;
+import com.adaptris.interlok.config.DataInputParameter;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import io.vertx.core.AsyncResult;
@@ -32,13 +32,26 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("vertx-workflow")
 public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, LicensedComponent {
   
-  private static final int DEFAULT_QUEUE_SIZE = 100;
+  private enum SEND_MODE {
+    ALL,
+    SINGLE;
+  }
+  
+  private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
+  
+  private static final int DEFAULT_QUEUE_SIZE = 10;
   
   private int queueCapacity;
   
   private VertXMessageTranslator vertXMessageTranslator;
   
   private MessageCodec<VertXMessage, VertXMessage> messageCodec;
+  
+  private DataInputParameter<String> targetWorkflowId;
+  
+  private Boolean continueOnError;
+  
+  private String targetSendMode;
   
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
   
@@ -52,15 +65,13 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   private transient VertxWorkflow handler;
   
-  private transient DefaultSerializableMessageTranslator serializableMessageTranslator;
-
   public VertxWorkflow() {
     super();
     this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
     this.setMessageCodec(new AdaptrisMessageCodec());
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
     handler = this;
-    serializableMessageTranslator = new DefaultSerializableMessageTranslator();
+    this.setTargetSendMode(DEFAULT_SEND_MODE);
   }
   
   @Override
@@ -88,59 +99,33 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   public void onVertxMessage(Message<VertXMessage> xMessage) {
     AdaptrisMessage adaptrisMessage = null;
-    InterlokService nextService = null;
     VertXMessage vxMessage = null;
     try {
       vxMessage = xMessage.body();
       adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
       log.trace("Incoming message: " + adaptrisMessage.getUniqueId());
-      nextService = vxMessage.getServiceRecord().getNextService();
-    } catch (CoreException | ServiceRecordException e) {
+    } catch (CoreException e) {
       log.error("Error translating incoming message.", e);
     }
-    if(vxMessage.getServiceRecord().getLastRunService() != null) {
-      if(vxMessage.getServiceRecord().getLastRunService().getState().equals(ServiceState.ERROR)) {
-        this.handleBadMessage(adaptrisMessage);
-        return ;
-      }
-    }
-    if(nextService != null) { // finished?
-      Service service = this.getServiceById(nextService.getId());
+
+    for(Service service : this.getServiceCollection()) {
+      InterlokService interlokService = new InterlokService(service.getUniqueId());
+      
       try {
         service.doService(adaptrisMessage);
-        nextService.setState(ServiceState.COMPLETE);
-        vxMessage.getServiceRecord().setLastServiceId(service.getUniqueId());
-        SerializableAdaptrisMessage serializableMessage = (SerializableAdaptrisMessage) serializableMessageTranslator.translate(adaptrisMessage);
-        vxMessage.setAdaptrisMessage(serializableMessage);
-      } catch (Exception exception) {
-        log.error("Error running service.", exception);
-        nextService.setState(ServiceState.ERROR);
-        nextService.setException(exception);
+        interlokService.setState(ServiceState.COMPLETE);
+      } catch (ServiceException ex) {
+        log.error("Error running service.", ex);
+        interlokService.setState(ServiceState.ERROR);
+        interlokService.setException(ex);
+        if(!continueOnError())
+          break;
       } finally {
-        try {
-          log.trace("Processed message (" + vxMessage.getAdaptrisMessage().getUniqueId() + "), putting back on the queue: " + vxMessage);
-          this.processingQueue.put(vxMessage);
-          this.reportQueue("after service put [" + vxMessage.getAdaptrisMessage().getUniqueId() + "]");
-        } catch (InterruptedException e) {
-          log.error("Could not place message on the processing queue.  Probably shutting down.");
-        }
+        vxMessage.getServiceRecord().addService(interlokService);
       }
-    } else {
-      // finished processing.
-      try {
-        doProduce(adaptrisMessage);
-        logSuccess(adaptrisMessage, xMessage.body().getStartProcessingTime());
-      } catch (ServiceException e) {
-        handleBadMessage("Exception from ServiceCollection", e, adaptrisMessage);
-      } catch (ProduceException e) {
-        adaptrisMessage.addEvent(getProducer(), false); // generate event
-        handleBadMessage("Exception producing msg", e, adaptrisMessage);
-        handleProduceException();
-      } finally {
-        sendMessageLifecycleEvent(adaptrisMessage);
-      }
-      workflowEnd(adaptrisMessage, adaptrisMessage);
     }
+    
+    xMessage.reply(vxMessage);
   }
 
   @Override
@@ -201,26 +186,65 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     
     if(xMessage != null) {
       this.reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
-      // send it to vertx
-      eventBus.send(this.getUniqueId(), xMessage);
+      // send it to vertx   
+      try {
+        if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name())) {
+          eventBus.send(targetWorkflowId(xMessage), xMessage, replyHandler -> {
+            if (replyHandler.succeeded()) {
+              handleReply(replyHandler.result());
+            }
+          });
+        } else {
+          eventBus.publish(targetWorkflowId(xMessage), xMessage);
+        }
+      } catch (InterlokException exception) {
+        log.error("Cannot derive the target from the incoming message.", exception);
+      }
     }
   }
   
+  private void handleReply(Message<Object> result) {
+    VertXMessage resultMessage = (VertXMessage) result.body();
+    
+    AdaptrisMessage adaptrisMessage;
+    try {
+      adaptrisMessage = this.getVertXMessageTranslator().translate(resultMessage);
+    } catch (CoreException e) {
+      log.error("Cannot translate the reply message back to an AdaptrisMessage", e);
+      return;
+    }
+    log.debug("Received reply: " + resultMessage.getAdaptrisMessage().getUniqueId());
+    log.trace(resultMessage.getAdaptrisMessage().getUniqueId() + ": Service record;\n" + resultMessage.getServiceRecord());
+    
+    boolean handleError = false;
+    for(InterlokService service : resultMessage.getServiceRecord().getServices()) {
+      if(service.getState().equals(ServiceState.ERROR)) {
+        handleError = true;
+        handleBadMessage("Exception from ServiceCollection", service.getException(), adaptrisMessage);
+      }
+    }
+    
+    if(!handleError) {
+      try {
+        doProduce(adaptrisMessage);
+        logSuccess(adaptrisMessage, resultMessage.getStartProcessingTime());
+      } catch (ServiceException e) {
+        handleBadMessage("Exception from ServiceCollection", e, adaptrisMessage);
+      } catch (ProduceException e) {
+        adaptrisMessage.addEvent(getProducer(), false); // generate event
+        handleBadMessage("Exception producing msg", e, adaptrisMessage);
+        handleProduceException();
+      } finally {
+        sendMessageLifecycleEvent(adaptrisMessage);
+      }
+      workflowEnd(adaptrisMessage, adaptrisMessage);
+    }
+  }
+
   @Override
   public void handle(Message<VertXMessage> event) {
     if(event.body() != null)
       this.onVertxMessage(event);
-  }
-  
-  private Service getServiceById(String id) {
-    Service result = null;
-    for(Service service : this.getServiceCollection().getServices()) {
-      if(service.getUniqueId().equals(id)) {
-        result = service;
-        break;
-      }
-    }
-    return result;
   }
   
   @Override
@@ -270,6 +294,19 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   public void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
     this.messageCodec = messageCodec;
   }
+  
+  protected String targetWorkflowId(VertXMessage vertxMessage) throws InterlokException {
+    AdaptrisMessage adaptrisMessage = this.getVertXMessageTranslator().translate(vertxMessage);
+    return this.getTargetWorkflowId().extract(adaptrisMessage);
+  }
+
+  public DataInputParameter<String> getTargetWorkflowId() {
+    return targetWorkflowId;
+  }
+
+  public void setTargetWorkflowId(DataInputParameter<String> targetWorkflowId) {
+    this.targetWorkflowId = targetWorkflowId;
+  }
 
   private void reportQueue(String title) {
     StringBuilder builder = new StringBuilder();
@@ -281,5 +318,25 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
     }
     log.trace(builder.toString());
+  }
+
+  protected boolean continueOnError() {
+    return this.getContinueOnError() != null ? this.getContinueOnError() : false;
+  }
+  
+  public Boolean getContinueOnError() {
+    return continueOnError;
+  }
+
+  public void setContinueOnError(Boolean continueOnError) {
+    this.continueOnError = continueOnError;
+  }
+
+  public String getTargetSendMode() {
+    return targetSendMode;
+  }
+
+  public void setTargetSendMode(String targetSendMode) {
+    this.targetSendMode = targetSendMode;
   }
 }

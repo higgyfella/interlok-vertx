@@ -22,14 +22,6 @@ public class VertXMessage {
     this.setServiceRecord(new ServiceRecord(serviceCollection));
   }
   
-  public String getNextServiceID() throws ServiceRecordException {
-    InterlokService nextService = this.getServiceRecord().getNextService();
-    if(nextService != null)
-      return nextService.getId();
-    else
-      return null;
-  }
-  
   public SerializableAdaptrisMessage getAdaptrisMessage() {
     return adaptrisMessage;
   }

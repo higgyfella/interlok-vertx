@@ -3,8 +3,6 @@ package com.adaptris.vertx;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
-
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceCollection;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -13,8 +11,6 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 public class ServiceRecord {
   
   private List<InterlokService> services;
-
-  private String lastServiceId;
   
   public ServiceRecord() {
     services = new ArrayList<InterlokService>();
@@ -27,14 +23,11 @@ public class ServiceRecord {
     }
   }
   
-  public InterlokService getLastRunService() {
-    if(!StringUtils.isEmpty(this.lastServiceId)) {
-      int indexOfLastService = this.services.indexOf(new InterlokService(this.lastServiceId));
-      if(indexOfLastService >= 0) {
-        return this.services.get(indexOfLastService);
-      }
+  public ServiceRecord(List<String> serviceIds) {
+    this();
+    for(String serviceId : serviceIds) {
+      services.add(new InterlokService(serviceId, ServiceState.NOT_STARTED));
     }
-    return null;
   }
   
   public boolean isSuccessfullyComplete() {
@@ -48,24 +41,6 @@ public class ServiceRecord {
     return result;
   }
   
-  public InterlokService getNextService() throws ServiceRecordException {
-    if(!StringUtils.isEmpty(this.lastServiceId)) {
-      int indexOfLastService = this.services.indexOf(new InterlokService(this.lastServiceId));
-      if(indexOfLastService >= 0) {
-        if(services.size() > (indexOfLastService + 1)) {
-          return services.get(indexOfLastService + 1); 
-        } else
-          return null; // No more services to run.
-      } else
-        throw new ServiceRecordException("Last run service not found: " + this.lastServiceId);
-    } else {
-      if(services.size() > 0) {
-        return services.get(0);
-      } else
-        return null; // no services to run.
-    }
-  }
-  
   public String toString() {
     StringBuilder builder = new StringBuilder();
     for(InterlokService service : services) {
@@ -75,11 +50,15 @@ public class ServiceRecord {
     return builder.toString();
   }
 
-  public String getLastServiceId() {
-    return lastServiceId;
+  public void addService(InterlokService interlokService) {
+    this.services.add(interlokService);
   }
 
-  public void setLastServiceId(String lastServiceId) {
-    this.lastServiceId = lastServiceId;
+  public List<InterlokService> getServices() {
+    return services;
+  }
+
+  public void setServices(List<InterlokService> services) {
+    this.services = services;
   }
 }
