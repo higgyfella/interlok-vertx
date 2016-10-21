@@ -21,16 +21,12 @@ import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
-import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
-import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageCodec;
 
 @XStreamAlias("vertx-workflow")
-public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, LicensedComponent {
+public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
   private enum SEND_MODE {
     ALL,
@@ -47,7 +43,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   private MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
-  private DataInputParameter<String> targetWorkflowId;
+  private DataInputParameter<String> targetComponentId;
   
   private Boolean continueOnError;
   
@@ -58,20 +54,17 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   private transient ExecutorService messageExecutor;
   
   private transient Future<?> messageExecutorHandle;
-  
-  private transient Vertx vertX;
-  
-  private transient EventBus eventBus;
-  
-  private transient VertxWorkflow handler;
+      
+  private transient ClusteredEventBus clusteredEventBus;
   
   public VertxWorkflow() {
     super();
     this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
     this.setMessageCodec(new AdaptrisMessageCodec());
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
-    handler = this;
     this.setTargetSendMode(DEFAULT_SEND_MODE);
+    clusteredEventBus = new ClusteredEventBus();
+    clusteredEventBus.setMessageCodec(getMessageCodec());
   }
   
   @Override
@@ -81,7 +74,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       log.debug("start processing msg [" + msg.toString(false) + "]");
       
       VertXMessage translatedMessage = this.getVertXMessageTranslator().translate(msg);
-      translatedMessage.setServiceRecord(new ServiceRecord(this.getServiceCollection()));
+      translatedMessage.setServiceRecord(new ServiceRecord());
       translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
       log.trace("New message [" + msg.getUniqueId() + "] ::: Queue slots available: " +  processingQueue.remainingCapacity());
@@ -125,12 +118,20 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       }
     }
     
-    xMessage.reply(vxMessage);
+    try {
+      VertXMessage vertXMessage = this.getVertXMessageTranslator().translate(adaptrisMessage);
+      vxMessage.setAdaptrisMessage(vertXMessage.getAdaptrisMessage());
+      xMessage.reply(vxMessage);
+    } catch (CoreException e) {
+      log.error("Could not translate the Vertx Message to an AdaptrisMessage", e);
+    }    
   }
 
   @Override
   protected void initialiseWorkflow() throws CoreException {
     super.initialiseWorkflow();
+    
+    this.getClusteredEventBus().setConsumerEventListener(this);
     
     if(this.getVertXMessageTranslator() == null)
       this.setVertXMessageTranslator(new VertXMessageTranslator());
@@ -153,35 +154,29 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   protected void startWorkflow() throws CoreException {
     super.startWorkflow();
     
-    Vertx.clusteredVertx(new VertxOptions(), new Handler<AsyncResult<Vertx>>() {
+    clusteredEventBus.startClusteredConsumer(this.getUniqueId());
+  }
+  
+  @Override
+  public void consumerStarted() {
+    Runnable messageProcessorRunnable = new Runnable() {
       @Override
-      public void handle(AsyncResult<Vertx> event) {
-        vertX = event.result();
-        eventBus = vertX.eventBus();
-        eventBus.registerDefaultCodec(VertXMessage.class, getMessageCodec());
-        eventBus.consumer(getUniqueId(), handler);
-        
-        Runnable messageProcessorRunnable = new Runnable() {
-          @Override
-          public void run() {
-            boolean interrupted = false;
-            while((!messageExecutorHandle.isDone()) && (!interrupted)) {
-              try {
-                processQueuedMessage();
-              } catch (InterruptedException e) {
-                interrupted = true;
-              }
-            }
+      public void run() {
+        boolean interrupted = false;
+        while((!messageExecutorHandle.isDone()) && (!interrupted)) {
+          try {
+            processQueuedMessage();
+          } catch (InterruptedException e) {
+            interrupted = true;
           }
-        };
-        
-        messageExecutorHandle = messageExecutor.submit(messageProcessorRunnable);
+        }
       }
-    });
-
+    };
+    
+    messageExecutorHandle = messageExecutor.submit(messageProcessorRunnable);
   }
 
-  private void processQueuedMessage() throws InterruptedException {
+  void processQueuedMessage() throws InterruptedException {
     VertXMessage xMessage = processingQueue.poll(1L, TimeUnit.SECONDS);
     
     if(xMessage != null) {
@@ -189,13 +184,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       // send it to vertx   
       try {
         if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name())) {
-          eventBus.send(targetWorkflowId(xMessage), xMessage, replyHandler -> {
-            if (replyHandler.succeeded()) {
-              handleReply(replyHandler.result());
-            }
-          });
+          getClusteredEventBus().send(targetComponentId(xMessage), xMessage);
         } else {
-          eventBus.publish(targetWorkflowId(xMessage), xMessage);
+          getClusteredEventBus().publish(targetComponentId(xMessage), xMessage);
         }
       } catch (InterlokException exception) {
         log.error("Cannot derive the target from the incoming message.", exception);
@@ -203,7 +194,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     }
   }
   
-  private void handleReply(Message<Object> result) {
+  public void handleMessageReply(Message<Object> result) {
     VertXMessage resultMessage = (VertXMessage) result.body();
     
     AdaptrisMessage adaptrisMessage;
@@ -257,8 +248,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     super.stopWorkflow();
     if(messageExecutorHandle != null)
       messageExecutorHandle.cancel(false);
-    if(eventBus != null)
-      eventBus.consumer(this.getUniqueId()).unregister();
+    if(getClusteredEventBus().getEventBus() != null)
+      getClusteredEventBus().getEventBus().consumer(this.getUniqueId()).unregister();
   }
   
   @Override
@@ -295,17 +286,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.messageCodec = messageCodec;
   }
   
-  protected String targetWorkflowId(VertXMessage vertxMessage) throws InterlokException {
+  protected String targetComponentId(VertXMessage vertxMessage) throws InterlokException {
     AdaptrisMessage adaptrisMessage = this.getVertXMessageTranslator().translate(vertxMessage);
-    return this.getTargetWorkflowId().extract(adaptrisMessage);
-  }
-
-  public DataInputParameter<String> getTargetWorkflowId() {
-    return targetWorkflowId;
-  }
-
-  public void setTargetWorkflowId(DataInputParameter<String> targetWorkflowId) {
-    this.targetWorkflowId = targetWorkflowId;
+    return this.getTargetComponentId().extract(adaptrisMessage);
   }
 
   private void reportQueue(String title) {
@@ -339,4 +322,29 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   public void setTargetSendMode(String targetSendMode) {
     this.targetSendMode = targetSendMode;
   }
+
+  public DataInputParameter<String> getTargetComponentId() {
+    return targetComponentId;
+  }
+
+  public void setTargetComponentId(DataInputParameter<String> targetComponentId) {
+    this.targetComponentId = targetComponentId;
+  }
+
+  public ClusteredEventBus getClusteredEventBus() {
+    return clusteredEventBus;
+  }
+
+  public void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
+    this.clusteredEventBus = clusteredEventBus;
+  }
+
+  public ArrayBlockingQueue<VertXMessage> getProcessingQueue() {
+    return processingQueue;
+  }
+
+  public void setProcessingQueue(ArrayBlockingQueue<VertXMessage> processingQueue) {
+    this.processingQueue = processingQueue;
+  }
+
 }

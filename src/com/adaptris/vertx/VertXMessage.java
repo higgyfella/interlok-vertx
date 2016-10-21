@@ -1,7 +1,6 @@
 package com.adaptris.vertx;
 
 import com.adaptris.core.SerializableAdaptrisMessage;
-import com.adaptris.core.ServiceCollection;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("vertx-message")
@@ -15,11 +14,6 @@ public class VertXMessage {
   
   public VertXMessage() {
     serviceRecord = new ServiceRecord();
-  }
-
-  public VertXMessage(SerializableAdaptrisMessage adaptrisMessage, ServiceCollection serviceCollection) {
-    this.setAdaptrisMessage(adaptrisMessage);
-    this.setServiceRecord(new ServiceRecord(serviceCollection));
   }
   
   public SerializableAdaptrisMessage getAdaptrisMessage() {
