@@ -1,11 +1,23 @@
 package com.adaptris.vertx;
 
 import java.util.concurrent.ArrayBlockingQueue;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
+
+import org.hibernate.validator.constraints.NotBlank;
+
+import com.adaptris.annotation.AdapterComponent;
+import com.adaptris.annotation.AdvancedConfig;
+import com.adaptris.annotation.AutoPopulated;
+import com.adaptris.annotation.ComponentProfile;
+import com.adaptris.annotation.InputFieldDefault;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
 import com.adaptris.core.ProduceException;
@@ -25,6 +37,45 @@ import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageCodec;
 
+/**
+ * <p>
+ * A clustered workflow that allows you to farm out the service-list processing to a random instance of this workflow in your cluster.<br/>
+ * Clusters are managed and discovered by Hazelcast.  To create a cluster you simply need to have multiple instances of this workflow either in different channels or different
+ * instances of Interlok with the same unique-id on each instance of the workflow.
+ * </p>
+ * <p>
+ * There are two modes of clustering; "all" and "single" (default), configured with the target-send-mode option.<br/>
+ * If you select "all", then each message consumed by this workflow will be sent to ALL instances in the cluster.  Likewise
+ * if you select "single" then a single random workflow instance will process the message.<br/>
+ * Additionally if you choose "single" once the worklfow instance has finished running their service-list the original worklfow
+ * will receive the processed message as a reply.  If you have a configured producer on the original workflow then the reply message will be produced.<br/>
+ * No reply is received if you choose "all" as the target send mode.  Any producers you need must therefore be configured in the service-list of each instance in the cluster.
+ * </p>
+ * <p>
+ * You can choose the cluster to send any consumed messages to by configuring the target-component-id.  The value of which will match the cluster name (unique-id) 
+ * of any clustered workflow.<br/>
+ * Any consumed message will be sent to the named cluster, which may also include the workflow that consumed the message if that workflow also shares the same
+ * unique-id as the other clustered workflow instances.
+ * </p>
+ * <p>
+ * Every message consumed as mentioned earlier is sent to the cluster for processing and then for a potential reply, which means that any consumed message
+ * is immediately acknowledged before the processing is complete.  To stop the workflows consumer from consuming too many messages waiting for processing we
+ * can set the maximum number of messages to be queued up for processing.  The default value is 10, but can be changed with the configuration option queue-capacity.<br/>
+ * </p>
+ * <p>
+ * Finally, should a service in the clustered instance fail, further services will not be run, unless you configure continue-on-error = true.  The default value being false.
+ * When all services have executed successfully or one has failed therefore stopping service execution, the reply is sent back to the original consumed workflow.  Once
+ * the reply has been received it will check to see if any services failed.  If any services have failed then the message-error-handler will run.
+ * </p>
+ * 
+ * @license STANDARD
+ * @config vertx-workflow
+ * @since 3.5.0
+ * @author Aaron
+ *
+ */
+@AdapterComponent
+@ComponentProfile(summary="A workflow that allows clustered processing of services.", tag="workflow")
 @XStreamAlias("vertx-workflow")
 public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
@@ -37,17 +88,28 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   private static final int DEFAULT_QUEUE_SIZE = 10;
   
+  @InputFieldDefault(value = "10")
   private int queueCapacity;
   
-  private VertXMessageTranslator vertXMessageTranslator;
-  
-  private MessageCodec<VertXMessage, VertXMessage> messageCodec;
-  
+  @NotNull
+  @Valid
   private DataInputParameter<String> targetComponentId;
   
+  @InputFieldDefault(value = "false")
   private Boolean continueOnError;
   
+  @NotBlank
+  @Pattern(regexp = "ALL|SINGLE")
+  @InputFieldDefault(value = "SINGLE")
   private String targetSendMode;
+  
+  @AutoPopulated
+  @AdvancedConfig
+  private MessageCodec<VertXMessage, VertXMessage> messageCodec;
+  
+  @AutoPopulated
+  @AdvancedConfig
+  private VertXMessageTranslator vertXMessageTranslator;
   
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
   
@@ -130,6 +192,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   @Override
   protected void initialiseWorkflow() throws CoreException {
     super.initialiseWorkflow();
+    
+    if(this.getQueueCapacity() <= 0)
+      throw new CoreException("Queue capacity must be greater than 0.");
     
     this.getClusteredEventBus().setConsumerEventListener(this);
     
