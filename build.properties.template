@@ -13,15 +13,3 @@ ivy.password=password
 
 ivy.repo=nexus-snapshots
 
-##############################################################
-# Which version of adp-core do you want to depend on?
-# The default is the developer snapshot
-##############################################################
-
-adp-core-version=3.0-SNAPSHOT
-
-##############################################################
-# What is the version of this binary to publish to nexus?
-##############################################################
-
-ivy.publish.revision=1.0-SNAPSHOT
