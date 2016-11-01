@@ -1,35 +1,38 @@
 package com.adaptris.vertx;
 
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.ArrayBlockingQueue;
 
-import static org.mockito.Mockito.verify;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.AdaptrisMessageProducerImp;
 import com.adaptris.core.Channel;
 import com.adaptris.core.CoreException;
 import com.adaptris.core.DefaultMessageFactory;
+import com.adaptris.core.ExampleWorkflowCase;
 import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.ProduceException;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
+import com.adaptris.core.WorkflowImp;
 import com.adaptris.core.common.ConstantDataInputParameter;
+import com.adaptris.core.services.LogMessageService;
 import com.adaptris.core.util.LifecycleHelper;
 
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
-import junit.framework.TestCase;
 
-public class VertxWorkflowTest extends TestCase {
+public class VertxWorkflowTest extends ExampleWorkflowCase {
   
+  public static final String BASE_DIR_KEY = "WorkflowCase.baseDir";
+
   private VertxWorkflow vertxWorkflow;
   
   private ConstantDataInputParameter targetWorkflowId;
@@ -51,6 +54,10 @@ public class VertxWorkflowTest extends TestCase {
   private EventBus mockEventBus;
   @Mock
   private AdaptrisMessageProducerImp mockProducer;
+
+  public VertxWorkflowTest(String name) {
+    super(name);
+  }
   
   public void tearDown() throws Exception {
     LifecycleHelper.stop(channel);
@@ -269,6 +276,28 @@ public class VertxWorkflowTest extends TestCase {
     
     verify(mockProducer).produce(any(AdaptrisMessage.class));
     verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
+  }
+
+  @Override
+  protected WorkflowImp createWorkflowForGenericTests() throws Exception {
+    VertxWorkflow workflow = new VertxWorkflow();
+    workflow.setUniqueId("my-cluster-name");
+    workflow.setTargetComponentId(new ConstantDataInputParameter("my-cluster-name"));
+    workflow.getServiceCollection().add(new LogMessageService());
+    return workflow;
+  }
+
+  @Override
+  protected Object retrieveObjectForSampleConfig() {
+    Channel channel = new Channel();
+    channel.setUniqueId("my-channel-id");
+    VertxWorkflow workflow = new VertxWorkflow();
+    workflow.setUniqueId("my-cluster-name");
+    workflow.setTargetComponentId(new ConstantDataInputParameter("my-cluster-name"));
+    workflow.getServiceCollection().add(new LogMessageService());
+    
+    channel.getWorkflowList().add(workflow);
+    return channel;
   }
 
 }
