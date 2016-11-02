@@ -10,6 +10,17 @@ import org.slf4j.LoggerFactory;
 
 import com.adaptris.util.TimeInterval;
 
+/**
+ * <p>
+ * This queue works almost identically to an ArrayBlockingQueue, with one difference. <br/>
+ * When you attempt to put(T) an item on the queue we will attempt to put this item at the tail of the queue, but if the queue is full we will block until the configured timeout.
+ * Which when surpassed will remove the head of the queue, because it has now timed out and again attempt to append the new item to the tail of the queue.
+ * </p>
+ * 
+ * @author Aaron
+ *
+ * @param <T>
+ */
 public class BlockingExpiryQueue<T> extends ArrayBlockingQueue<T> {
   
   protected transient Logger log = LoggerFactory.getLogger(this.getClass().getName());
@@ -39,7 +50,6 @@ public class BlockingExpiryQueue<T> extends ArrayBlockingQueue<T> {
       this.notifyListenerOfExpiry(taken);
       log.trace("Removed expired head of the queue: " + taken);
     }
-      
   } 
   
   public void registerExpiryListener(ExpiryListener<T> listener) {
