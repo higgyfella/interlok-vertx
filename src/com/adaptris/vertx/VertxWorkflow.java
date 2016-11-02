@@ -31,6 +31,9 @@ import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
+import com.adaptris.util.TimeInterval;
+import com.adaptris.vertx.util.BlockingExpiryQueue;
+import com.adaptris.vertx.util.ExpiryListener;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import io.vertx.core.Handler;
@@ -77,12 +80,14 @@ import io.vertx.core.eventbus.MessageCodec;
 @AdapterComponent
 @ComponentProfile(summary="A workflow that allows clustered processing of services.", tag="workflow")
 @XStreamAlias("vertx-workflow")
-public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
+public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent, ExpiryListener<VertXMessage> {
   
   private enum SEND_MODE {
     ALL,
     SINGLE;
   }
+  
+  private static final long DEFAULT_ITEM_EXPIRY_SECONDS = 30;
   
   private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
   
@@ -111,7 +116,12 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   @AdvancedConfig
   private VertXMessageTranslator vertXMessageTranslator;
   
+  @NotNull
+  @AutoPopulated
+  private TimeInterval itemExpiryTimeout;
+  
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
+  private transient BlockingExpiryQueue<VertXMessage> consumerQueue;
   
   private transient ExecutorService messageExecutor;
   
@@ -141,6 +151,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       
       log.trace("New message [" + msg.getUniqueId() + "] ::: Queue slots available: " +  processingQueue.remainingCapacity());
       processingQueue.put(translatedMessage);
+      
+      // If we are expecting replies, lets block the consumer until we get some replies back.
+      if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name()))
+        consumerQueue.put(translatedMessage);
+      
       log.trace("New queue size : " +  processingQueue.remainingCapacity());
       this.reportQueue("new message put [" + msg.getUniqueId() + "]");
     } catch (CoreException e) {
@@ -202,6 +217,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       this.setVertXMessageTranslator(new VertXMessageTranslator());
     
     processingQueue = new ArrayBlockingQueue<>(this.getQueueCapacity(), true);
+    consumerQueue = new BlockingExpiryQueue<>(this.getQueueCapacity(), true);
+    consumerQueue.setExpiryTimeout(this.getItemExpiryTimeout() != null ? this.getItemExpiryTimeout() : new TimeInterval(DEFAULT_ITEM_EXPIRY_SECONDS, TimeUnit.SECONDS));
+    consumerQueue.registerExpiryListener(this);
   }
 
   @Override
@@ -292,6 +310,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
         handleProduceException();
       } finally {
         sendMessageLifecycleEvent(adaptrisMessage);
+        consumerQueue.remove(resultMessage); // unblock the consumer, now that we have completed a message. 
       }
       workflowEnd(adaptrisMessage, adaptrisMessage);
     }
@@ -301,6 +320,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   public void handle(Message<VertXMessage> event) {
     if(event.body() != null)
       this.onVertxMessage(event);
+  }
+  
+  @Override
+  public void itemExpired(VertXMessage item) {
+    log.warn("Expecting message reply, but message has timed out: " + item);
   }
   
   @Override
@@ -410,6 +434,14 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
 
   public void setProcessingQueue(ArrayBlockingQueue<VertXMessage> processingQueue) {
     this.processingQueue = processingQueue;
+  }
+
+  public TimeInterval getItemExpiryTimeout() {
+    return itemExpiryTimeout;
+  }
+
+  public void setItemExpiryTimeout(TimeInterval itemExpiryTimeout) {
+    this.itemExpiryTimeout = itemExpiryTimeout;
   }
 
 }

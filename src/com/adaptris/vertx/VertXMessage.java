@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import org.apache.commons.lang.builder.EqualsBuilder;
+
 import com.adaptris.core.SerializableAdaptrisMessage;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
@@ -48,6 +50,21 @@ public class VertXMessage {
     builder.append("\n");
     builder.append("\n");
     return builder.toString();
+  }
+  
+  /*
+   * If the unique id's are the same then equals will return true.
+   * @see java.lang.Object#equals(java.lang.Object)
+   */
+  public boolean equals(Object object) {
+    if(!(object instanceof VertXMessage))
+      return false;
+    else {
+      VertXMessage otherInstance = (VertXMessage) object;
+      return new EqualsBuilder()
+            .append(this.getAdaptrisMessage().getUniqueId(), otherInstance.getAdaptrisMessage().getUniqueId())
+            .isEquals();
+    }
   }
 
 }
