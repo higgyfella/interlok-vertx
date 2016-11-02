@@ -99,7 +99,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @AutoPopulated
   private VertXMessageTranslator vertXMessageTranslator;
   
-  private ProcessingExceptionHandler replyServiceExcecptionHandler;
+  private ProcessingExceptionHandler replyServiceExceptionHandler;
   
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
@@ -156,7 +156,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
         this.getReplyService().doService(adaptrisMessage);
       } catch (ServiceException e) {
         log.error("Unable to process service reply: " + resultMessage, e);
-        this.getReplyServiceExcecptionHandler().handleProcessingException(adaptrisMessage);
+        this.getReplyServiceExceptionHandler().handleProcessingException(adaptrisMessage);
       }
     }
   }
@@ -289,12 +289,12 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.clusteredEventBus = clusteredEventBus;
   }
 
-  public ProcessingExceptionHandler getReplyServiceExcecptionHandler() {
-    return replyServiceExcecptionHandler;
+  public ProcessingExceptionHandler getReplyServiceExceptionHandler() {
+    return replyServiceExceptionHandler;
   }
 
-  public void setReplyServiceExcecptionHandler(ProcessingExceptionHandler replyServiceExcecptionHandler) {
-    this.replyServiceExcecptionHandler = replyServiceExcecptionHandler;
+  public void setReplyServiceExceptionHandler(ProcessingExceptionHandler replyServiceExcecptionHandler) {
+    this.replyServiceExceptionHandler = replyServiceExcecptionHandler;
   }
 
   
