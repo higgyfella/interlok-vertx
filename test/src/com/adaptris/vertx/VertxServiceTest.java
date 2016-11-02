@@ -1,13 +1,13 @@
 package com.adaptris.vertx;
 
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
@@ -49,7 +49,6 @@ public class VertxServiceTest extends TestCase {
     vertxService.setClusteredEventBus(mockClusteredEventBus);
     
     targetComponentId = new ConstantDataInputParameter("SomeWorkflowID");
-    
     vertxService.setTargetComponentId(targetComponentId);
     
     LifecycleHelper.init(vertxService);

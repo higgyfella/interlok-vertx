@@ -16,6 +16,9 @@ import com.adaptris.util.TimeInterval;
  * When you attempt to put(T) an item on the queue we will attempt to put this item at the tail of the queue, but if the queue is full we will block until the configured timeout.
  * Which when surpassed will remove the head of the queue, because it has now timed out and again attempt to append the new item to the tail of the queue.
  * </p>
+ * <p>
+ * You may also register an {@link ExpiryListener}, which will be triggered when we do have to expire and item.
+ * </p>
  * 
  * @author Aaron
  *

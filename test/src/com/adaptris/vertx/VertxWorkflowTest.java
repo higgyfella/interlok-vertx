@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -25,6 +26,7 @@ import com.adaptris.core.WorkflowImp;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.services.LogMessageService;
 import com.adaptris.core.util.LifecycleHelper;
+import com.adaptris.util.TimeInterval;
 
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.Message;
@@ -71,8 +73,8 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     
     vertxWorkflow = new VertxWorkflow();
     targetWorkflowId = new ConstantDataInputParameter("SomeWorkflowID");
-    vertxWorkflow.setTargetComponentId(targetWorkflowId);
     
+    vertxWorkflow.setTargetComponentId(targetWorkflowId);    
     vertxWorkflow.setProducer(mockProducer);
     vertxWorkflow.setClusteredEventBus(mockClusteredEventBus);
     
@@ -295,6 +297,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     workflow.setUniqueId("my-cluster-name");
     workflow.setTargetComponentId(new ConstantDataInputParameter("my-cluster-name"));
     workflow.getServiceCollection().add(new LogMessageService());
+    workflow.setItemExpiryTimeout(new TimeInterval(30L, TimeUnit.SECONDS));
     
     channel.getWorkflowList().add(workflow);
     return channel;

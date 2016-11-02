@@ -5,6 +5,8 @@ import java.util.concurrent.TimeUnit;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 import com.adaptris.util.TimeInterval;
 
@@ -38,6 +40,8 @@ public class BlockingExpiryQueueTest extends TestCase {
     assertEquals("3", blockingExpiryQueue.take());
     
     assertNull(blockingExpiryQueue.poll(1L, TimeUnit.SECONDS));
+    
+    verify(mockExpiryListener, never()).itemExpired("1");
   }
   
   public void testExpireHead() throws Exception {
@@ -50,7 +54,7 @@ public class BlockingExpiryQueueTest extends TestCase {
     assertEquals("3", blockingExpiryQueue.take());
     assertEquals("4", blockingExpiryQueue.take());
     
-    verify(mockExpiryListener).itemExpired("1");
+    verify(mockExpiryListener, times(1)).itemExpired("1");
   }
 
 }
