@@ -1,7 +1,6 @@
 package com.adaptris.vertx;
 
 import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 
 import org.apache.commons.lang.StringUtils;
@@ -82,7 +81,6 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   
   private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
   
-  @NotNull
   @Valid
   private Service service;
   
@@ -216,20 +214,23 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     }
 
     Service service = this.getService();
-    InterlokService interlokService = new InterlokService(service.getUniqueId());
-    
-    try {
-      service.doService(adaptrisMessage);
-      interlokService.setState(ServiceState.COMPLETE);
-      VertXMessage vertXMessage = this.getVertXMessageTranslator().translate(adaptrisMessage);
-      vxMessage.setAdaptrisMessage(vertXMessage.getAdaptrisMessage());
-    } catch (CoreException ex) {
-      log.error("Error running service.", ex);
-      interlokService.setState(ServiceState.ERROR);
-      interlokService.setException(ex);
-    } finally {
-      vxMessage.getServiceRecord().addService(interlokService);
-    }
+    if(service != null) {
+      InterlokService interlokService = new InterlokService(service.getUniqueId());
+      
+      try {
+        service.doService(adaptrisMessage);
+        interlokService.setState(ServiceState.COMPLETE);
+        VertXMessage vertXMessage = this.getVertXMessageTranslator().translate(adaptrisMessage);
+        vxMessage.setAdaptrisMessage(vertXMessage.getAdaptrisMessage());
+      } catch (CoreException ex) {
+        log.error("Error running service.", ex);
+        interlokService.setState(ServiceState.ERROR);
+        interlokService.setException(ex);
+      } finally {
+        vxMessage.getServiceRecord().addService(interlokService);
+      }
+    } else
+      log.warn("No service configured for the vertx-service (" + this.getUniqueId() + "), therefore not processing.");
   
     return vxMessage;
   }
