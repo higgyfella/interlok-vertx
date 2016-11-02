@@ -78,7 +78,7 @@ import io.vertx.core.eventbus.MessageCodec;
  */
 @AdapterComponent
 @ComponentProfile(summary="A workflow that allows clustered processing of services.", tag="workflow")
-@XStreamAlias("vertx-workflow")
+@XStreamAlias("clustered-workflow")
 public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent, ExpiryListener<VertXMessage> {
   
   private enum SEND_MODE {
@@ -109,17 +109,16 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   @AutoPopulated
   @AdvancedConfig
-  private MessageCodec<VertXMessage, VertXMessage> messageCodec;
-  
-  @AutoPopulated
-  @AdvancedConfig
   private VertXMessageTranslator vertXMessageTranslator;
   
   @NotNull
   @AutoPopulated
   private TimeInterval itemExpiryTimeout;
   
+  private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
+  
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
+  
   private transient BlockingExpiryQueue<VertXMessage> consumerQueue;
   
   private transient ExecutorService messageExecutor;
@@ -334,7 +333,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   @Override
   public boolean isEnabled(License license) {
-    return license.isEnabled(LicenseType.Standard);
+    return license.isEnabled(LicenseType.Enterprise);
   }
   
   @Override

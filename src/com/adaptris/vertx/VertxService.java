@@ -71,7 +71,7 @@ import io.vertx.core.eventbus.MessageCodec;
  */
 @AdapterComponent
 @ComponentProfile(summary="Allows clustered single service processing.", tag="service")
-@XStreamAlias("vertx-service")
+@XStreamAlias("clustered-service")
 public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
   private enum SEND_MODE {
@@ -200,7 +200,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
 
   @Override
   public boolean isEnabled(License license) {
-    return license.isEnabled(LicenseType.Standard);
+    return license.isEnabled(LicenseType.Enterprise);
   }
 
   private VertXMessage onVertxMessage(VertXMessage vxMessage) {

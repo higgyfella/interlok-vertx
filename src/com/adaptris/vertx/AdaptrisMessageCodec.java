@@ -12,7 +12,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.MessageCodec;
 
-@XStreamAlias("adaptris-message-codec")
+@XStreamAlias("clustered-adaptris-message-codec")
 public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMessage> {
   
   protected transient Logger log = LoggerFactory.getLogger(this.getClass().getName());

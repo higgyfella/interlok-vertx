@@ -14,16 +14,20 @@ import com.adaptris.core.CoreException;
 import com.adaptris.core.DefaultMessageFactory;
 import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
+import com.adaptris.core.ServiceCase;
 import com.adaptris.core.ServiceException;
+import com.adaptris.core.StandardProcessingExceptionHandler;
 import com.adaptris.core.common.ConstantDataInputParameter;
+import com.adaptris.core.services.LogMessageService;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.interlok.InterlokException;
 
 import io.vertx.core.eventbus.Message;
-import junit.framework.TestCase;
 
-public class VertxServiceTest extends TestCase {
+public class VertxServiceTest extends ServiceCase {
   
+  public static final String BASE_DIR_KEY = "ServiceCase.baseDir";
+
   private VertxService vertxService;
   
   private ConstantDataInputParameter targetComponentId;
@@ -42,6 +46,10 @@ public class VertxServiceTest extends TestCase {
   private Message<Object> mockVertxReplyMessage;
   @Mock
   private ProcessingExceptionHandler mockProcessingExceptionHandler;
+
+  public VertxServiceTest(String name) {
+    super(name);
+  }
   
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
@@ -184,6 +192,16 @@ public class VertxServiceTest extends TestCase {
     verify(replyService).doService(any(AdaptrisMessage.class));
     verify(mockProcessingExceptionHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
-  
-  
+
+  @Override
+  protected Object retrieveObjectForSampleConfig() {
+    VertxService vertxService = new VertxService();
+    vertxService.setUniqueId("MyServiceCluster");
+    vertxService.setService(new LogMessageService());
+    vertxService.setReplyService(new LogMessageService());
+    vertxService.setReplyServiceExceptionHandler(new StandardProcessingExceptionHandler(new LogMessageService()));
+    vertxService.setTargetComponentId(new ConstantDataInputParameter("my-cluster-name"));
+    
+    return vertxService;
+  }
 }

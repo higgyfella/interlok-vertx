@@ -9,7 +9,7 @@ import com.adaptris.core.DefaultSerializableMessageTranslator;
 import com.adaptris.core.SerializableAdaptrisMessage;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-@XStreamAlias("vertx-message-translator")
+@XStreamAlias("clustered-message-translator")
 public class VertXMessageTranslator implements MessageTranslator {
   
   protected transient Logger log = LoggerFactory.getLogger(this.getClass().getName());

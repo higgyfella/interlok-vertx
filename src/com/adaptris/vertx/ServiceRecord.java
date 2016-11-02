@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-@XStreamAlias("service-record")
+@XStreamAlias("clustered-service-record")
 public class ServiceRecord {
   
   private List<InterlokService> services;

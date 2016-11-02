@@ -2,7 +2,7 @@ package com.adaptris.vertx;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-@XStreamAlias("interlok-service")
+@XStreamAlias("clustered-interlok-service")
 public class InterlokService {
   
   private String id;

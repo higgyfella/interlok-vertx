@@ -1,2 +1,2 @@
 junit.WorkflowCase.baseDir=${example-xml.build.dir}/workflows
-
+junit.ServiceCase.baseDir=${example-xml.build.dir}/services

@@ -5,7 +5,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import com.adaptris.core.SerializableAdaptrisMessage;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
-@XStreamAlias("vertx-message")
+@XStreamAlias("clustered-message")
 public class VertXMessage {
   
   private SerializableAdaptrisMessage adaptrisMessage;
