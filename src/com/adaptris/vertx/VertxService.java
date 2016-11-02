@@ -14,6 +14,7 @@ import com.adaptris.annotation.ComponentProfile;
 import com.adaptris.annotation.InputFieldDefault;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
+import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.ServiceImp;
@@ -49,7 +50,8 @@ import io.vertx.core.eventbus.MessageCodec;
  * When an instance of this service receives a message to process, it will run the wrapped-service (which may also be a service-list).  But no further services in the workflow will be run.
  * </p>
  * <p>
- * Should you choose to send each message to only one instance in the cluster then the original service will receive a reply and run the wrapped reply-service (which may also be a service-list).
+ * Should you choose to send each message to only one instance in the cluster then the original service will receive a reply and run the wrapped reply-service (which may also be a service-list). <br/>
+ * And should the service(s) fail you can configure a {@link ProcessingExceptionHandler}.
  * </p>
  * <p>
  * Do note however, that any reply expected will not be waited for.<br/>
@@ -99,6 +101,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @AutoPopulated
   private VertXMessageTranslator vertXMessageTranslator;
   
+  private ProcessingExceptionHandler replyServiceExcecptionHandler;
+  
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ClusteredEventBus clusteredEventBus;
@@ -127,7 +131,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
           }
         } catch (InterlokException exception) {
-          log.error("Cannot derive the target from the incoming message.", exception);
+          throw new ServiceException("Cannot derive the target from the incoming message.", exception);
         }
       } else {
         this.onVertxMessage(translatedMessage);
@@ -144,7 +148,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     try {
       adaptrisMessage = this.getVertXMessageTranslator().translate(resultMessage);
     } catch (CoreException e) {
-      log.error("Cannot translate the reply message back to an AdaptrisMessage", e);
+      log.error("Cannot translate the reply message back to an AdaptrisMessage: " + resultMessage, e);
       return;
     }
     log.debug("Received reply: " + resultMessage.getAdaptrisMessage().getUniqueId());
@@ -153,7 +157,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
       try {
         this.getReplyService().doService(adaptrisMessage);
       } catch (ServiceException e) {
-        log.error("Unable to process service reply.", e);
+        log.error("Unable to process service reply: " + resultMessage, e);
+        this.getReplyServiceExcecptionHandler().handleProcessingException(adaptrisMessage);
       }
     }
   }
@@ -281,6 +286,14 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
 
   public void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
     this.clusteredEventBus = clusteredEventBus;
+  }
+
+  public ProcessingExceptionHandler getReplyServiceExcecptionHandler() {
+    return replyServiceExcecptionHandler;
+  }
+
+  public void setReplyServiceExcecptionHandler(ProcessingExceptionHandler replyServiceExcecptionHandler) {
+    this.replyServiceExcecptionHandler = replyServiceExcecptionHandler;
   }
 
   

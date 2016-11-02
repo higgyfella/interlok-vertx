@@ -12,6 +12,7 @@ import org.mockito.MockitoAnnotations;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
 import com.adaptris.core.DefaultMessageFactory;
+import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.common.ConstantDataInputParameter;
@@ -39,6 +40,8 @@ public class VertxServiceTest extends TestCase {
   private Message<VertXMessage> mockVertxMessage;
   @Mock
   private Message<Object> mockVertxReplyMessage;
+  @Mock
+  private ProcessingExceptionHandler mockProcessingExceptionHandler;
   
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
@@ -163,6 +166,23 @@ public class VertxServiceTest extends TestCase {
     vertxService.handleMessageReply(mockVertxReplyMessage);
     
     verify(replyService).doService(any(AdaptrisMessage.class));
+  }
+  
+  public void testReceiveReplyMessageRunsReplyServiceFails() throws Exception {
+    AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
+    VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
+    
+    vertxService.setReplyServiceExcecptionHandler(mockProcessingExceptionHandler);
+    
+    when(mockVertxReplyMessage.body())
+        .thenReturn(vertXMessage);
+    doThrow(new ServiceException("GeneratedException"))
+        .when(replyService).doService(any(AdaptrisMessage.class));
+
+    vertxService.handleMessageReply(mockVertxReplyMessage);
+    
+    verify(replyService).doService(any(AdaptrisMessage.class));
+    verify(mockProcessingExceptionHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
   
   

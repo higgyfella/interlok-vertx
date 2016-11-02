@@ -175,6 +175,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       log.trace("Incoming message: " + adaptrisMessage.getUniqueId());
     } catch (CoreException e) {
       log.error("Error translating incoming message.", e);
+      return;
     }
 
     for(Service service : this.getServiceCollection()) {
@@ -272,6 +273,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
         }
       } catch (InterlokException exception) {
         log.error("Cannot derive the target from the incoming message.", exception);
+        try {
+          this.handleBadMessage(this.getVertXMessageTranslator().translate(xMessage));
+        } catch (CoreException e) {
+          log.error("Cannot translate into AdaptrisMessage: " + xMessage);
+        }
       }
     }
   }
