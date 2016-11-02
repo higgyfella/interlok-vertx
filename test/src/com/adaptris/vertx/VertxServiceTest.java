@@ -172,7 +172,7 @@ public class VertxServiceTest extends TestCase {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
     
-    vertxService.setReplyServiceExcecptionHandler(mockProcessingExceptionHandler);
+    vertxService.setReplyServiceExceptionHandler(mockProcessingExceptionHandler);
     
     when(mockVertxReplyMessage.body())
         .thenReturn(vertXMessage);
