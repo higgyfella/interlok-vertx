@@ -35,42 +35,45 @@ import io.vertx.core.eventbus.MessageCodec;
 /**
  * <p>
  * A clustered service that allows you to farm out the service processing to a random instance of this service in your cluster.<br/>
- * Clusters are managed and discovered by Hazelcast.  To create a cluster you simply need to have multiple instances of this service either in different workflows or different
- * instances of Interlok with the same unique-id on each instance of the service.
+ * Clusters are managed and discovered by Hazelcast. To create a cluster you simply need to have multiple instances of this service
+ * either in different workflows or different instances of Interlok with the same unique-id on each instance of the service.
  * </p>
  * <p>
  * There are two modes of clustering; "all" and "single" (default), configured with the target-send-mode option.<br/>
- * If you select "all", then each message will be sent to ALL instances in the cluster.  Likewise
- * if you select "single" then a single random service instance will process the message.<br/>
- * Additionally if you choose "single" once the service instance has finished running the original service
- * will receive the processed message as a reply.
+ * If you select "all", then each message will be sent to ALL instances in the cluster. Likewise if you select "single" then a
+ * single random service instance will process the message.<br/>
+ * Additionally if you choose "single" once the service instance has finished running the original service will receive the
+ * processed message as a reply.
  * </p>
  * <p>
- * When an instance of this service receives a message to process, it will run the wrapped-service (which may also be a service-list).  But no further services in the workflow will be run.
+ * When an instance of this service receives a message to process, it will run the wrapped-service (which may also be a
+ * service-list). But no further services in the workflow will be run.
  * </p>
  * <p>
- * Should you choose to send each message to only one instance in the cluster then the original service will receive a reply and run the wrapped reply-service (which may also be a service-list). <br/>
+ * Should you choose to send each message to only one instance in the cluster then the original service will receive a reply and run
+ * the wrapped reply-service (which may also be a service-list). <br/>
  * And should the service(s) fail you can configure a {@link ProcessingExceptionHandler}.
  * </p>
  * <p>
  * Do note however, that any reply expected will not be waited for.<br/>
- * If there are services to be run after this service in the originally consumed workflow, they will run without waiting for the reply.
+ * If there are services to be run after this service in the originally consumed workflow, they will run without waiting for the
+ * reply.
  * </p>
  * <p>
- * You can choose the cluster to send messages to by configuring the target-component-id.  The value of which will match the cluster name (unique-id) 
- * of any clustered service.<br/>
- * Any message will be sent to the named cluster, which may also include this very instance of the service if this service shares the same
- * unique-id as the other clustered service instances.
+ * You can choose the cluster to send messages to by configuring the target-component-id. The value of which will match the cluster
+ * name (unique-id) of any clustered service.<br/>
+ * Any message will be sent to the named cluster, which may also include this very instance of the service if this service shares
+ * the same unique-id as the other clustered service instances.
  * </p>
  * 
- * @license STANDARD
- * @config vertx-service
+ * @license ENTERPRISE
+ * @config clustered-service
  * @since 3.5.0
  * @author Aaron
  *
  */
 @AdapterComponent
-@ComponentProfile(summary="Allows clustered single service processing.", tag="service")
+@ComponentProfile(summary = "Allows clustered single service processing.", tag = "service,clustering,vertx")
 @XStreamAlias("clustered-service")
 public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
