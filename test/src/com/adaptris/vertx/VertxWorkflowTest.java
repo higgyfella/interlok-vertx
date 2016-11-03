@@ -25,6 +25,7 @@ import com.adaptris.core.ServiceException;
 import com.adaptris.core.WorkflowImp;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.services.LogMessageService;
+import com.adaptris.core.stubs.MockNonStandardRequestReplyProducer;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.types.InterlokMessage;
@@ -106,7 +107,15 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
   public void testOnMessageInterrupted() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
+    doThrow(new InterruptedException("GeneratedExpected"))
+        .when(mockInternalprocessingQueue).put(any(VertXMessage.class));
+    
+    vertxWorkflow.setProcessingQueue(mockInternalprocessingQueue);
+    vertxWorkflow.registerActiveMsgErrorHandler(mockErrorHandler);
+    
     vertxWorkflow.onAdaptrisMessage(adaptrisMessage);
+    
+    verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
   
   public void testOnMessageSendToCluster() throws Exception {
@@ -374,7 +383,32 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockProducer).produce(any(AdaptrisMessage.class));
     verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
-
+  
+  public void testObjectMetadataCopy() throws Exception {
+    AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
+    adaptrisMessage.addObjectHeader("ObjectHeaderKey", "ObjectHeaderValue");
+    
+    MockNonStandardRequestReplyProducer producer = new MockNonStandardRequestReplyProducer();
+    vertxWorkflow.setProducer(producer);
+    
+    vertxWorkflow.setProcessingQueue(mockInternalprocessingQueue);
+    
+    vertxWorkflow.onAdaptrisMessage(adaptrisMessage);
+    
+    VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
+    vertXMessage.getServiceRecord().addService(new InterlokService("SomeId", ServiceState.COMPLETE));
+        
+    when(mockReplyVertxMessage.body())
+        .thenReturn(vertXMessage);
+    when(mockProducer.createName())
+        .thenReturn("name");
+    
+    vertxWorkflow.handleMessageReply(mockReplyVertxMessage);
+    
+    AdaptrisMessage message = (AdaptrisMessage) producer.getProducedMessages().get(0);
+    assertEquals("ObjectHeaderValue", (String) message.getObjectHeaders().get("ObjectHeaderKey"));
+  }
+  
   @Override
   protected WorkflowImp createWorkflowForGenericTests() throws Exception {
     VertxWorkflow workflow = new VertxWorkflow();

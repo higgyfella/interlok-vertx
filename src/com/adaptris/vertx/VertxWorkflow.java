@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -127,6 +129,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       
   private transient ClusteredEventBus clusteredEventBus;
   
+  private transient Map<String, Map<Object, Object>> objectMetadataCache;
+  
   public VertxWorkflow() {
     super();
     this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
@@ -135,6 +139,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.setTargetSendMode(DEFAULT_SEND_MODE);
     clusteredEventBus = new ClusteredEventBus();
     clusteredEventBus.setMessageCodec(getMessageCodec());
+    objectMetadataCache = new HashMap<>();
   }
   
   @Override
@@ -142,6 +147,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     try {
       workflowStart(msg);
       log.debug("start processing msg [" + msg.toString(false) + "]");
+      
+      objectMetadataCache.put(msg.getUniqueId(), msg.getObjectHeaders()); 
       
       VertXMessage translatedMessage = this.getVertXMessageTranslator().translate(msg);
       translatedMessage.setServiceRecord(new ServiceRecord());
@@ -219,6 +226,8 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     consumerQueue = new BlockingExpiryQueue<>(this.getQueueCapacity(), true);
     consumerQueue.setExpiryTimeout(this.getItemExpiryTimeout() != null ? this.getItemExpiryTimeout() : new TimeInterval(DEFAULT_ITEM_EXPIRY_SECONDS, TimeUnit.SECONDS));
     consumerQueue.registerExpiryListener(this);
+    
+    objectMetadataCache.clear();
   }
 
   @Override
@@ -287,6 +296,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     AdaptrisMessage adaptrisMessage;
     try {
       adaptrisMessage = this.getVertXMessageTranslator().translate(resultMessage);
+      moveObjectMetadata(adaptrisMessage);
     } catch (CoreException e) {
       log.error("Cannot translate the reply message back to an AdaptrisMessage", e);
       return;
@@ -320,6 +330,14 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     }
   }
 
+  private void moveObjectMetadata(AdaptrisMessage adaptrisMessage) {
+    Map<Object, Object> cachedObjectMetadata = objectMetadataCache.get(adaptrisMessage.getUniqueId());
+    if(cachedObjectMetadata != null) {
+      for (Map.Entry<Object, Object> entry : cachedObjectMetadata.entrySet())
+        adaptrisMessage.addObjectHeader(entry.getKey(), entry.getValue());
+    }
+  }
+
   @Override
   public void handle(Message<VertXMessage> event) {
     if(event.body() != null)
@@ -329,6 +347,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   @Override
   public void itemExpired(VertXMessage item) {
     log.warn("Expecting message reply, but message has timed out: " + item);
+    objectMetadataCache.remove(item.getAdaptrisMessage().getUniqueId());
   }
   
   @Override
@@ -390,10 +409,12 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     
     VertXMessage[] array = new VertXMessage[processingQueue.size()];
     array = (VertXMessage[]) this.processingQueue.toArray(array);
-    for(VertXMessage message : array) {
-      builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
+    if(array != null) {
+      for(VertXMessage message : array) {
+        builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
+      }
+      log.trace(builder.toString());
     }
-    log.trace(builder.toString());
   }
 
   protected boolean continueOnError() {
