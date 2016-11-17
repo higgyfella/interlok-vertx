@@ -33,8 +33,10 @@
     <dependency org="com.adaptris" name="adp-stubs" rev="${adp-core-version}" changing="true" conf="test->default"/>
     <dependency org="com.adaptris" name="adp-core-apt" rev="${adp-core-version}" conf="compile->default;ant->default" changing="true"/>
 
-	<dependency org="io.vertx" name="vertx-core" rev="3.3.2" transitive="false" conf="compile->default"/>
-	
+	<dependency org="io.vertx" name="vertx-core" rev="3.3.2" conf="compile->default"/>
+	<dependency org="io.vertx" name="vertx-hazelcast" rev="3.3.2"/>
+	<dependency org="com.hazelcast" name="hazelcast" rev="3.7.1" conf="compile->default"/>
+
     <dependency org="org.apache.velocity" name="velocity" rev="1.7" transitive="false" conf="compile->default"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="1.7.12" conf="compile->default" />
     <dependency org="org.slf4j" name="jcl-over-slf4j" rev="1.7.12" conf="optional->default" />
@@ -47,7 +49,7 @@
     <!-- For Various ANT Tasks -->
     <dependency org="ant-contrib" name="ant-contrib" rev="1.0b3" conf="ant->default" transitive="false"/>
     <dependency org="com.yworks"  name="yguard" rev="2.5.2" conf="ant->default" transitive="false"/>
-    <dependency org="org.jacoco" name="org.jacoco.ant" rev="0.7.4.201502262128" conf="ant->default"/>
+    <dependency org="org.jacoco" name="org.jacoco.ant" rev="0.7.7.201606060606" conf="ant->default"/>
     <!--
     <dependency org="com.google.code.findbugs" name="findbugs" rev="2.0.1" conf="ant"/>
     -->
