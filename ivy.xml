@@ -33,9 +33,9 @@
     <dependency org="com.adaptris" name="adp-stubs" rev="${adp-core-version}" changing="true" conf="test->default"/>
     <dependency org="com.adaptris" name="adp-core-apt" rev="${adp-core-version}" conf="compile->default;ant->default" changing="true"/>
 
-	<dependency org="io.vertx" name="vertx-core" rev="3.3.2" conf="compile->default"/>
-	<dependency org="io.vertx" name="vertx-hazelcast" rev="3.3.2"/>
-	<dependency org="com.hazelcast" name="hazelcast" rev="3.7.1" conf="compile->default"/>
+    <dependency org="io.vertx" name="vertx-core" rev="3.3.2" conf="compile->default"/>
+    <dependency org="io.vertx" name="vertx-hazelcast" rev="3.3.2" conf="compile->default"/>
+    <dependency org="com.hazelcast" name="hazelcast" rev="3.7.1" conf="compile->default"/>
 
     <dependency org="org.apache.velocity" name="velocity" rev="1.7" transitive="false" conf="compile->default"/>
     <dependency org="org.slf4j" name="slf4j-api" rev="1.7.12" conf="compile->default" />
