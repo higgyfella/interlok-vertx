@@ -10,9 +10,6 @@ import java.util.concurrent.TimeUnit;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Pattern;
-
-import org.hibernate.validator.constraints.NotBlank;
 
 import com.adaptris.annotation.AdapterComponent;
 import com.adaptris.annotation.AdvancedConfig;
@@ -109,10 +106,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   @InputFieldDefault(value = "false")
   private Boolean continueOnError;
   
-  @NotBlank
-  @Pattern(regexp = "ALL|SINGLE")
-  @InputFieldDefault(value = "SINGLE")
-  private String targetSendMode;
+  @NotNull
+  @AutoPopulated
+  private SendMode.Mode targetSendMode;
   
   @AutoPopulated
   @AdvancedConfig
@@ -141,7 +137,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
     this.setMessageCodec(new AdaptrisMessageCodec());
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
-    this.setTargetSendMode(DEFAULT_SEND_MODE);
+    this.setTargetSendMode(SendMode.Mode.SINGLE);
     clusteredEventBus = new ClusteredEventBus();
     clusteredEventBus.setMessageCodec(getMessageCodec());
     objectMetadataCache = new HashMap<>();
@@ -163,7 +159,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       processingQueue.put(translatedMessage);
       
       // If we are expecting replies, lets block the consumer until we get some replies back.
-      if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name()))
+      if (this.getTargetSendMode() == SendMode.Mode.SINGLE)
         consumerQueue.put(translatedMessage);
       
       log.trace("New queue size : " +  processingQueue.remainingCapacity());
@@ -279,7 +275,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       this.reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
       // send it to vertx   
       try {
-        if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name())) {
+        if (this.getTargetSendMode() == SendMode.Mode.SINGLE) {
           getClusteredEventBus().send(targetComponentId(xMessage), xMessage);
         } else {
           getClusteredEventBus().publish(targetComponentId(xMessage), xMessage);
@@ -434,11 +430,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.continueOnError = continueOnError;
   }
 
-  public String getTargetSendMode() {
+  public SendMode.Mode getTargetSendMode() {
     return targetSendMode;
   }
 
-  public void setTargetSendMode(String targetSendMode) {
+  public void setTargetSendMode(SendMode.Mode targetSendMode) {
     this.targetSendMode = targetSendMode;
   }
 

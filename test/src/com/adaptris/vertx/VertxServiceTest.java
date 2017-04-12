@@ -21,7 +21,6 @@ import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.services.LogMessageService;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.interlok.InterlokException;
-import com.adaptris.vertx.VertxService.SEND_MODE;
 
 import io.vertx.core.eventbus.Message;
 
@@ -83,7 +82,7 @@ public class VertxServiceTest extends ServiceCase {
   public void testDoServicePublish() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
-    vertxService.setTargetSendMode(SEND_MODE.ALL);
+    vertxService.setTargetSendMode(SendMode.Mode.ALL);
     vertxService.doService(adaptrisMessage);
     
     verify(mockClusteredEventBus).publish(any(), any());

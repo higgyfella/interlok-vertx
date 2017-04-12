@@ -1,6 +1,7 @@
 package com.adaptris.vertx;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.StringUtils;
 
@@ -76,11 +77,6 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-service")
 public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
-  public enum SEND_MODE {
-    ALL,
-    SINGLE;
-  }
-  
   private static final ProcessingExceptionHandler DEFAULT_EXCEPTION_HANDLER = new NullProcessingExceptionHandler() {
     @Override
     public void handleProcessingException(AdaptrisMessage msg) {
@@ -96,13 +92,16 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Valid
   private DataInputParameter<String> targetComponentId;
   
-  private SEND_MODE targetSendMode;
-  
-  @AdvancedConfig
+  @NotNull
   @AutoPopulated
+  private SendMode.Mode targetSendMode;
+
+  @AdvancedConfig
+  @Valid
   private VertXMessageTranslator vertXMessageTranslator;
   
   @AdvancedConfig
+  @Valid
   private ProcessingExceptionHandler replyServiceExceptionHandler;
   
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
@@ -112,7 +111,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   public VertxService() {
     super();
     this.setMessageCodec(new AdaptrisMessageCodec());
-    this.setTargetSendMode(SEND_MODE.SINGLE);
+    this.setTargetSendMode(SendMode.Mode.SINGLE);
     this.setTargetComponentId(new ConstantDataInputParameter());
     clusteredEventBus = new ClusteredEventBus();
     clusteredEventBus.setMessageCodec(getMessageCodec());
@@ -127,7 +126,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
       
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
         try {
-          if (this.getTargetSendMode() == SEND_MODE.SINGLE) {
+          if (this.getTargetSendMode() == SendMode.Mode.SINGLE) {
             getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage);
           } else {
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
@@ -289,11 +288,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.targetComponentId = targetComponentId;
   }
 
-  public SEND_MODE getTargetSendMode() {
+  public SendMode.Mode getTargetSendMode() {
     return targetSendMode;
   }
 
-  public void setTargetSendMode(SEND_MODE targetSendMode) {
+  public void setTargetSendMode(SendMode.Mode targetSendMode) {
     this.targetSendMode = targetSendMode;
   }
 

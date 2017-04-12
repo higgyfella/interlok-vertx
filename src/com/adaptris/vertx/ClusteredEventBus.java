@@ -40,7 +40,7 @@ public class ClusteredEventBus {
   }
   
   public void publish(String targetConsumer, Object message) {
-    this.getEventBus().send(targetConsumer, message);
+    this.getEventBus().publish(targetConsumer, message);
   }
   
 
