@@ -159,9 +159,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       processingQueue.put(translatedMessage);
       
       // If we are expecting replies, lets block the consumer until we get some replies back.
-      if (this.getTargetSendMode() == SendMode.Mode.SINGLE)
+      if (SendMode.single(this.getTargetSendMode())) {
         consumerQueue.put(translatedMessage);
-      
+      }
       log.trace("New queue size : " +  processingQueue.remainingCapacity());
       this.reportQueue("new message put [" + msg.getUniqueId() + "]");
     } catch (CoreException e) {
@@ -275,7 +275,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
       this.reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
       // send it to vertx   
       try {
-        if (this.getTargetSendMode() == SendMode.Mode.SINGLE) {
+        if (SendMode.single(this.getTargetSendMode())) {
           getClusteredEventBus().send(targetComponentId(xMessage), xMessage);
         } else {
           getClusteredEventBus().publish(targetComponentId(xMessage), xMessage);

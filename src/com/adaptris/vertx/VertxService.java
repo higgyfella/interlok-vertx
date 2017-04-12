@@ -126,7 +126,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
       
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
         try {
-          if (this.getTargetSendMode() == SendMode.Mode.SINGLE) {
+          if (SendMode.single(this.getTargetSendMode())) {
             getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage);
           } else {
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
