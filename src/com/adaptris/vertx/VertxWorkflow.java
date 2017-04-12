@@ -391,11 +391,11 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.vertXMessageTranslator = vertXMessageTranslator;
   }
 
-  public MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
+  MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
     return messageCodec;
   }
 
-  public void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
+  void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
     this.messageCodec = messageCodec;
   }
   
@@ -446,19 +446,19 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.targetComponentId = targetComponentId;
   }
 
-  public ClusteredEventBus getClusteredEventBus() {
+  ClusteredEventBus getClusteredEventBus() {
     return clusteredEventBus;
   }
 
-  public void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
+  void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
     this.clusteredEventBus = clusteredEventBus;
   }
 
-  public ArrayBlockingQueue<VertXMessage> getProcessingQueue() {
+  ArrayBlockingQueue<VertXMessage> getProcessingQueue() {
     return processingQueue;
   }
 
-  public void setProcessingQueue(ArrayBlockingQueue<VertXMessage> processingQueue) {
+  void setProcessingQueue(ArrayBlockingQueue<VertXMessage> processingQueue) {
     this.processingQueue = processingQueue;
   }
 

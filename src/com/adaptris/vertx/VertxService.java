@@ -184,6 +184,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     LifecycleHelper.init(this.getService());
     LifecycleHelper.init(this.getReplyService());
     LifecycleHelper.init(this.getReplyServiceExceptionHandler());
+    getClusteredEventBus().setConsumerEventListener(this);
   }
   
   @Override
@@ -272,11 +273,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.vertXMessageTranslator = vertXMessageTranslator;
   }
 
-  public MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
+  MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
     return messageCodec;
   }
 
-  public void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
+  void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
     this.messageCodec = messageCodec;
   }
 
@@ -304,11 +305,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.replyService = replyService;
   }
 
-  public ClusteredEventBus getClusteredEventBus() {
+  ClusteredEventBus getClusteredEventBus() {
     return clusteredEventBus;
   }
 
-  public void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
+  void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
     this.clusteredEventBus = clusteredEventBus;
   }
 
