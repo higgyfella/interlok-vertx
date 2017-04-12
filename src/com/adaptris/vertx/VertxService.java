@@ -11,8 +11,10 @@ import com.adaptris.annotation.AdvancedConfig;
 import com.adaptris.annotation.AutoPopulated;
 import com.adaptris.annotation.ComponentProfile;
 import com.adaptris.annotation.InputFieldDefault;
+import com.adaptris.core.AdaptrisComponent;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
+import com.adaptris.core.NullProcessingExceptionHandler;
 import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
@@ -82,6 +84,12 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     SINGLE;
   }
   
+  private static final ProcessingExceptionHandler DEFAULT_EXCEPTION_HANDLER = new NullProcessingExceptionHandler() {
+    @Override
+    public void handleProcessingException(AdaptrisMessage msg) {
+    }
+  };
+
   private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
   
   @Valid
@@ -102,6 +110,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @AutoPopulated
   private VertXMessageTranslator vertXMessageTranslator;
   
+  @AdvancedConfig
   private ProcessingExceptionHandler replyServiceExceptionHandler;
   
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
@@ -159,7 +168,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
         this.getReplyService().doService(adaptrisMessage);
       } catch (ServiceException e) {
         log.error("Unable to process service reply: " + resultMessage, e);
-        this.getReplyServiceExceptionHandler().handleProcessingException(adaptrisMessage);
+        replyExceptionHandler().handleProcessingException(adaptrisMessage);
       }
     }
   }
@@ -167,23 +176,41 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Override
   public void prepare() throws CoreException {
     LicenseChecker.newChecker().checkLicense(this);
-    this.getService().prepare();
+    prepare(getService());
+    prepare(getReplyService());
+    prepare(getReplyServiceExceptionHandler());
+  }
+
+  private void prepare(AdaptrisComponent c) throws CoreException {
+    if (c != null) {
+      c.prepare();
+    }
   }
 
   @Override
   protected void initService() throws CoreException {
+    if (this.getVertXMessageTranslator() == null) this.setVertXMessageTranslator(new VertXMessageTranslator());
     LifecycleHelper.init(this.getService());
-    
-    if(this.getVertXMessageTranslator() == null)
-      this.setVertXMessageTranslator(new VertXMessageTranslator());
+    LifecycleHelper.init(this.getReplyService());
+    LifecycleHelper.init(this.getReplyServiceExceptionHandler());
   }
   
+  @Override
   public void start() throws CoreException {
     clusteredEventBus.startClusteredConsumer(this.getUniqueId());
     
     LifecycleHelper.start(this.getService());
+    LifecycleHelper.start(this.getReplyService());
+    LifecycleHelper.start(this.getReplyServiceExceptionHandler());
   }
   
+  @Override
+  public void stop() {
+    LifecycleHelper.stop(this.getService());
+    LifecycleHelper.stop(this.getReplyService());
+    LifecycleHelper.stop(this.getReplyServiceExceptionHandler());
+  }
+
   @Override
   public void consumerStarted() {
   }
@@ -191,6 +218,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Override
   protected void closeService() {
     LifecycleHelper.close(this.getService());
+    LifecycleHelper.close(this.getReplyService());
+    LifecycleHelper.close(this.getReplyServiceExceptionHandler());
   }
 
   public Service getService() {
@@ -300,5 +329,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.replyServiceExceptionHandler = replyServiceExcecptionHandler;
   }
 
-  
+  ProcessingExceptionHandler replyExceptionHandler() {
+    return getReplyServiceExceptionHandler() != null ? getReplyServiceExceptionHandler() : DEFAULT_EXCEPTION_HANDLER;
+  }
+
 }
