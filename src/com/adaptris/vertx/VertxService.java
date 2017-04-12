@@ -1,16 +1,13 @@
 package com.adaptris.vertx;
 
 import javax.validation.Valid;
-import javax.validation.constraints.Pattern;
 
 import org.apache.commons.lang.StringUtils;
-import org.hibernate.validator.constraints.NotBlank;
 
 import com.adaptris.annotation.AdapterComponent;
 import com.adaptris.annotation.AdvancedConfig;
 import com.adaptris.annotation.AutoPopulated;
 import com.adaptris.annotation.ComponentProfile;
-import com.adaptris.annotation.InputFieldDefault;
 import com.adaptris.core.AdaptrisComponent;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
@@ -79,7 +76,7 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-service")
 public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
-  private enum SEND_MODE {
+  public enum SEND_MODE {
     ALL,
     SINGLE;
   }
@@ -89,8 +86,6 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     public void handleProcessingException(AdaptrisMessage msg) {
     }
   };
-
-  private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
   
   @Valid
   private Service service;
@@ -101,10 +96,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Valid
   private DataInputParameter<String> targetComponentId;
   
-  @NotBlank
-  @Pattern(regexp = "ALL|SINGLE")
-  @InputFieldDefault(value = "SINGLE")
-  private String targetSendMode;
+  private SEND_MODE targetSendMode;
   
   @AdvancedConfig
   @AutoPopulated
@@ -120,7 +112,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   public VertxService() {
     super();
     this.setMessageCodec(new AdaptrisMessageCodec());
-    this.setTargetSendMode(DEFAULT_SEND_MODE);
+    this.setTargetSendMode(SEND_MODE.SINGLE);
     this.setTargetComponentId(new ConstantDataInputParameter());
     clusteredEventBus = new ClusteredEventBus();
     clusteredEventBus.setMessageCodec(getMessageCodec());
@@ -135,7 +127,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
       
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
         try {
-          if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name())) {
+          if (this.getTargetSendMode() == SEND_MODE.SINGLE) {
             getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage);
           } else {
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
@@ -297,11 +289,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.targetComponentId = targetComponentId;
   }
 
-  public String getTargetSendMode() {
+  public SEND_MODE getTargetSendMode() {
     return targetSendMode;
   }
 
-  public void setTargetSendMode(String targetSendMode) {
+  public void setTargetSendMode(SEND_MODE targetSendMode) {
     this.targetSendMode = targetSendMode;
   }
 
