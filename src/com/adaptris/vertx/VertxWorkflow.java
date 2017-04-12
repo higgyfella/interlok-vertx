@@ -85,21 +85,13 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-workflow")
 public class VertxWorkflow extends StandardWorkflow implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent, ExpiryListener<VertXMessage> {
   
-  private enum SEND_MODE {
-    ALL,
-    SINGLE;
-  }
-  
-  private static final long DEFAULT_ITEM_EXPIRY_SECONDS = 30;
-  
-  private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
+  private static final TimeInterval DEFAULT_ITEM_EXPIRY = new TimeInterval(30L, TimeUnit.SECONDS);
   
   private static final int DEFAULT_QUEUE_SIZE = 10;
   
   @InputFieldDefault(value = "10")
-  private int queueCapacity;
+  private Integer queueCapacity;
   
-  @NotNull
   @Valid
   private DataInputParameter<String> targetComponentId;
   
@@ -113,9 +105,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   @AutoPopulated
   @AdvancedConfig
   private VertXMessageTranslator vertXMessageTranslator;
-  
-  @NotNull
-  @AutoPopulated
+
+  @AdvancedConfig
+  @Valid
   private TimeInterval itemExpiryTimeout;
   
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
@@ -134,7 +126,6 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   
   public VertxWorkflow() {
     super();
-    this.setQueueCapacity(DEFAULT_QUEUE_SIZE);
     this.setMessageCodec(new AdaptrisMessageCodec());
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
     this.setTargetSendMode(SendMode.Mode.SINGLE);
@@ -215,7 +206,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   protected void initialiseWorkflow() throws CoreException {
     super.initialiseWorkflow();
     
-    if(this.getQueueCapacity() <= 0)
+    if (queueCapacity() <= 0)
       throw new CoreException("Queue capacity must be greater than 0.");
     
     this.getClusteredEventBus().setConsumerEventListener(this);
@@ -223,9 +214,9 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     if(this.getVertXMessageTranslator() == null)
       this.setVertXMessageTranslator(new VertXMessageTranslator());
     
-    processingQueue = new ArrayBlockingQueue<>(this.getQueueCapacity(), true);
-    consumerQueue = new BlockingExpiryQueue<>(this.getQueueCapacity(), true);
-    consumerQueue.setExpiryTimeout(this.getItemExpiryTimeout() != null ? this.getItemExpiryTimeout() : new TimeInterval(DEFAULT_ITEM_EXPIRY_SECONDS, TimeUnit.SECONDS));
+    processingQueue = new ArrayBlockingQueue<>(queueCapacity(), true);
+    consumerQueue = new BlockingExpiryQueue<>(queueCapacity(), true);
+    consumerQueue.setExpiryTimeout(itemExpiryTimeout());
     consumerQueue.registerExpiryListener(this);
     
     objectMetadataCache.clear();
@@ -375,11 +366,15 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
   }
   
 
-  public int getQueueCapacity() {
+  int queueCapacity() {
+    return getQueueCapacity() != null ? getQueueCapacity().intValue() : DEFAULT_QUEUE_SIZE;
+  }
+
+  public Integer getQueueCapacity() {
     return queueCapacity;
   }
 
-  public void setQueueCapacity(int queueCapacity) {
+  public void setQueueCapacity(Integer queueCapacity) {
     this.queueCapacity = queueCapacity;
   }
 
@@ -470,4 +465,7 @@ public class VertxWorkflow extends StandardWorkflow implements Handler<Message<V
     this.itemExpiryTimeout = itemExpiryTimeout;
   }
 
+  TimeInterval itemExpiryTimeout() {
+    return getItemExpiryTimeout() != null ? getItemExpiryTimeout() : DEFAULT_ITEM_EXPIRY;
+  }
 }
