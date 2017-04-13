@@ -305,7 +305,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     ArrayBlockingQueue<VertXMessage> internalprocessingQueue = new ArrayBlockingQueue<>(1);
     internalprocessingQueue.put(vertXMessage);
     
-    vertxWorkflow.setTargetSendMode("ALL");
+    vertxWorkflow.setTargetSendMode(SendMode.Mode.all);
     vertxWorkflow.setProcessingQueue(internalprocessingQueue);
     vertxWorkflow.getClusteredEventBus().setEventBus(mockEventBus);
     

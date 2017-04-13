@@ -82,7 +82,7 @@ public class VertxServiceTest extends ServiceCase {
   public void testDoServicePublish() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
-    vertxService.setTargetSendMode("ALL");
+    vertxService.setTargetSendMode(SendMode.Mode.ALL);
     vertxService.doService(adaptrisMessage);
     
     verify(mockClusteredEventBus).publish(any(), any());

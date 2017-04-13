@@ -1,18 +1,18 @@
 package com.adaptris.vertx;
 
 import javax.validation.Valid;
-import javax.validation.constraints.Pattern;
+import javax.validation.constraints.NotNull;
 
 import org.apache.commons.lang.StringUtils;
-import org.hibernate.validator.constraints.NotBlank;
 
 import com.adaptris.annotation.AdapterComponent;
 import com.adaptris.annotation.AdvancedConfig;
 import com.adaptris.annotation.AutoPopulated;
 import com.adaptris.annotation.ComponentProfile;
-import com.adaptris.annotation.InputFieldDefault;
+import com.adaptris.core.AdaptrisComponent;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
+import com.adaptris.core.NullProcessingExceptionHandler;
 import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
@@ -77,12 +77,11 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-service")
 public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
-  private enum SEND_MODE {
-    ALL,
-    SINGLE;
-  }
-  
-  private static final String DEFAULT_SEND_MODE = SEND_MODE.SINGLE.name();
+  private static final ProcessingExceptionHandler DEFAULT_EXCEPTION_HANDLER = new NullProcessingExceptionHandler() {
+    @Override
+    public void handleProcessingException(AdaptrisMessage msg) {
+    }
+  };
   
   @Valid
   private Service service;
@@ -93,15 +92,16 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Valid
   private DataInputParameter<String> targetComponentId;
   
-  @NotBlank
-  @Pattern(regexp = "ALL|SINGLE")
-  @InputFieldDefault(value = "SINGLE")
-  private String targetSendMode;
-  
-  @AdvancedConfig
+  @NotNull
   @AutoPopulated
+  private SendMode.Mode targetSendMode;
+
+  @AdvancedConfig
+  @Valid
   private VertXMessageTranslator vertXMessageTranslator;
   
+  @AdvancedConfig
+  @Valid
   private ProcessingExceptionHandler replyServiceExceptionHandler;
   
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
@@ -111,7 +111,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   public VertxService() {
     super();
     this.setMessageCodec(new AdaptrisMessageCodec());
-    this.setTargetSendMode(DEFAULT_SEND_MODE);
+    this.setTargetSendMode(SendMode.Mode.SINGLE);
     this.setTargetComponentId(new ConstantDataInputParameter());
     clusteredEventBus = new ClusteredEventBus();
     clusteredEventBus.setMessageCodec(getMessageCodec());
@@ -126,7 +126,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
       
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
         try {
-          if(this.getTargetSendMode().equalsIgnoreCase(SEND_MODE.SINGLE.name())) {
+          if (SendMode.single(this.getTargetSendMode())) {
             getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage);
           } else {
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
@@ -159,7 +159,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
         this.getReplyService().doService(adaptrisMessage);
       } catch (ServiceException e) {
         log.error("Unable to process service reply: " + resultMessage, e);
-        this.getReplyServiceExceptionHandler().handleProcessingException(adaptrisMessage);
+        replyExceptionHandler().handleProcessingException(adaptrisMessage);
       }
     }
   }
@@ -167,23 +167,42 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Override
   public void prepare() throws CoreException {
     LicenseChecker.newChecker().checkLicense(this);
-    this.getService().prepare();
+    prepare(getService());
+    prepare(getReplyService());
+    prepare(getReplyServiceExceptionHandler());
+  }
+
+  private void prepare(AdaptrisComponent c) throws CoreException {
+    if (c != null) {
+      c.prepare();
+    }
   }
 
   @Override
   protected void initService() throws CoreException {
+    if (this.getVertXMessageTranslator() == null) this.setVertXMessageTranslator(new VertXMessageTranslator());
     LifecycleHelper.init(this.getService());
-    
-    if(this.getVertXMessageTranslator() == null)
-      this.setVertXMessageTranslator(new VertXMessageTranslator());
+    LifecycleHelper.init(this.getReplyService());
+    LifecycleHelper.init(this.getReplyServiceExceptionHandler());
+    getClusteredEventBus().setConsumerEventListener(this);
   }
   
+  @Override
   public void start() throws CoreException {
     clusteredEventBus.startClusteredConsumer(this.getUniqueId());
     
     LifecycleHelper.start(this.getService());
+    LifecycleHelper.start(this.getReplyService());
+    LifecycleHelper.start(this.getReplyServiceExceptionHandler());
   }
   
+  @Override
+  public void stop() {
+    LifecycleHelper.stop(this.getService());
+    LifecycleHelper.stop(this.getReplyService());
+    LifecycleHelper.stop(this.getReplyServiceExceptionHandler());
+  }
+
   @Override
   public void consumerStarted() {
   }
@@ -191,6 +210,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Override
   protected void closeService() {
     LifecycleHelper.close(this.getService());
+    LifecycleHelper.close(this.getReplyService());
+    LifecycleHelper.close(this.getReplyServiceExceptionHandler());
   }
 
   public Service getService() {
@@ -252,11 +273,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.vertXMessageTranslator = vertXMessageTranslator;
   }
 
-  public MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
+  MessageCodec<VertXMessage, VertXMessage> getMessageCodec() {
     return messageCodec;
   }
 
-  public void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
+  void setMessageCodec(MessageCodec<VertXMessage, VertXMessage> messageCodec) {
     this.messageCodec = messageCodec;
   }
 
@@ -268,11 +289,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.targetComponentId = targetComponentId;
   }
 
-  public String getTargetSendMode() {
+  public SendMode.Mode getTargetSendMode() {
     return targetSendMode;
   }
 
-  public void setTargetSendMode(String targetSendMode) {
+  public void setTargetSendMode(SendMode.Mode targetSendMode) {
     this.targetSendMode = targetSendMode;
   }
 
@@ -284,11 +305,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.replyService = replyService;
   }
 
-  public ClusteredEventBus getClusteredEventBus() {
+  ClusteredEventBus getClusteredEventBus() {
     return clusteredEventBus;
   }
 
-  public void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
+  void setClusteredEventBus(ClusteredEventBus clusteredEventBus) {
     this.clusteredEventBus = clusteredEventBus;
   }
 
@@ -300,5 +321,8 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     this.replyServiceExceptionHandler = replyServiceExcecptionHandler;
   }
 
-  
+  ProcessingExceptionHandler replyExceptionHandler() {
+    return getReplyServiceExceptionHandler() != null ? getReplyServiceExceptionHandler() : DEFAULT_EXCEPTION_HANDLER;
+  }
+
 }
