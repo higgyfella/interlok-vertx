@@ -9,4 +9,7 @@ public interface ConsumerEventListener extends Handler<Message<VertXMessage>>{
   
   public void handleMessageReply(Message<Object> result);
   
+  String getClusterId();
+
+  String getUniqueId();
 }

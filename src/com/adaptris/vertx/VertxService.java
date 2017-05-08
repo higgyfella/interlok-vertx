@@ -9,6 +9,7 @@ import com.adaptris.annotation.AdapterComponent;
 import com.adaptris.annotation.AdvancedConfig;
 import com.adaptris.annotation.AutoPopulated;
 import com.adaptris.annotation.ComponentProfile;
+import com.adaptris.annotation.DisplayOrder;
 import com.adaptris.core.AdaptrisComponent;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
@@ -36,7 +37,9 @@ import io.vertx.core.eventbus.MessageCodec;
  * <p>
  * A clustered service that allows you to farm out the service processing to a random instance of this service in your cluster.<br/>
  * Clusters are managed and discovered by Hazelcast. To create a cluster you simply need to have multiple instances of this service
- * either in different workflows or different instances of Interlok with the same unique-id on each instance of the service.
+ * either in different workflows or different instances of Interlok with the same vertx-id on each instance of the service. It is
+ * recommended that you explicitly configure {@link #setClusterId(String)}; if it is not expliclty configured, then we default to
+ * {@link #getUniqueId()}.
  * </p>
  * <p>
  * There are two modes of clustering; "all" and "single" (default), configured with the target-send-mode option.<br/>
@@ -75,13 +78,17 @@ import io.vertx.core.eventbus.MessageCodec;
 @AdapterComponent
 @ComponentProfile(summary = "Allows clustered single service processing.", tag = "service,clustering,vertx")
 @XStreamAlias("clustered-service")
-public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
+@DisplayOrder(order = {"clusterId", "targetSendMode"})
+public class VertxService extends ServiceImp
+    implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
   private static final ProcessingExceptionHandler DEFAULT_EXCEPTION_HANDLER = new NullProcessingExceptionHandler() {
     @Override
     public void handleProcessingException(AdaptrisMessage msg) {
     }
   };
+
+  private String clusterId;
   
   @Valid
   private Service service;
@@ -149,16 +156,17 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     try {
       adaptrisMessage = this.getVertXMessageTranslator().translate(resultMessage);
     } catch (CoreException e) {
-      log.error("Cannot translate the reply message back to an AdaptrisMessage: " + resultMessage, e);
+      log.error("Cannot translate the reply message back to an AdaptrisMessage: {}", resultMessage, e);
       return;
     }
-    log.debug("Received reply: " + resultMessage.getAdaptrisMessage().getUniqueId());
-    
+    log.debug("Received reply: {}", resultMessage.getAdaptrisMessage().getUniqueId());
+    log.trace("{}: Service record : {}", resultMessage.getAdaptrisMessage().getUniqueId(), resultMessage.getServiceRecord());
+
     if(this.getReplyService() != null) {
       try {
         this.getReplyService().doService(adaptrisMessage);
       } catch (ServiceException e) {
-        log.error("Unable to process service reply: " + resultMessage, e);
+        log.error("Unable to process service reply: {}", resultMessage, e);
         replyExceptionHandler().handleProcessingException(adaptrisMessage);
       }
     }
@@ -181,19 +189,18 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
   @Override
   protected void initService() throws CoreException {
     if (this.getVertXMessageTranslator() == null) this.setVertXMessageTranslator(new VertXMessageTranslator());
+    clusteredEventBus.setMessageCodec(getMessageCodec());
     LifecycleHelper.init(this.getService());
     LifecycleHelper.init(this.getReplyService());
     LifecycleHelper.init(this.getReplyServiceExceptionHandler());
-    getClusteredEventBus().setConsumerEventListener(this);
   }
   
   @Override
   public void start() throws CoreException {
-    clusteredEventBus.startClusteredConsumer(this.getUniqueId());
-    
     LifecycleHelper.start(this.getService());
     LifecycleHelper.start(this.getReplyService());
     LifecycleHelper.start(this.getReplyServiceExceptionHandler());
+    clusteredEventBus.startClusteredConsumer(this);
   }
   
   @Override
@@ -325,4 +332,16 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     return getReplyServiceExceptionHandler() != null ? getReplyServiceExceptionHandler() : DEFAULT_EXCEPTION_HANDLER;
   }
 
+  public String getClusterId() {
+    return clusterId;
+  }
+
+  /**
+   * Sets the ID that will be registered with vertx.
+   * 
+   * @param vertxId if not configured, defaults to {@link #getUniqueId()}
+   */
+  public void setClusterId(String vertxId) {
+    this.clusterId = vertxId;
+  }
 }
