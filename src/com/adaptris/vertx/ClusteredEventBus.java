@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import static org.apache.commons.lang.StringUtils.isEmpty;
+
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
@@ -7,24 +9,25 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageCodec;
 
-public class ClusteredEventBus {
+class ClusteredEventBus {
 
-  private ConsumerEventListener consumerEventListener;
+  private transient ConsumerEventListener consumerEventListener;
   
-  private MessageCodec<VertXMessage, VertXMessage> messageCodec; 
+  private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient Vertx vertX;
   
   private transient EventBus eventBus;
   
-  public void startClusteredConsumer(String endpointName) {
+  public void startClusteredConsumer(ConsumerEventListener listener) {
+    setConsumerEventListener(listener);
     Vertx.clusteredVertx(new VertxOptions(), new Handler<AsyncResult<Vertx>>() {
       @Override
       public void handle(AsyncResult<Vertx> event) {
         vertX = event.result();
         eventBus = vertX.eventBus();
         eventBus.registerDefaultCodec(VertXMessage.class, getMessageCodec());
-        eventBus.consumer(endpointName, getConsumerEventListener());
+        eventBus.consumer(vertxId(listener), getConsumerEventListener());
         
         getConsumerEventListener().consumerStarted();
       }
@@ -43,12 +46,11 @@ public class ClusteredEventBus {
     this.getEventBus().publish(targetConsumer, message);
   }
   
-
-  public ConsumerEventListener getConsumerEventListener() {
+  private ConsumerEventListener getConsumerEventListener() {
     return consumerEventListener;
   }
 
-  public void setConsumerEventListener(ConsumerEventListener consumerEventListener) {
+  private void setConsumerEventListener(ConsumerEventListener consumerEventListener) {
     this.consumerEventListener = consumerEventListener;
   }
 
@@ -68,4 +70,7 @@ public class ClusteredEventBus {
     this.eventBus = eventBus;
   }
   
+  String vertxId(ConsumerEventListener c) {
+    return !isEmpty(c.getClusterId()) ? c.getClusterId() : c.getUniqueId();
+  }
 }
