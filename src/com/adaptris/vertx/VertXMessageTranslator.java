@@ -38,12 +38,12 @@ public class VertXMessageTranslator implements MessageTranslator {
     return this.getSerializableMessageTranslator().translate(vertxMessage.getAdaptrisMessage());
   }
 
-  public DefaultSerializableMessageTranslator getSerializableMessageTranslator() {
+  DefaultSerializableMessageTranslator getSerializableMessageTranslator() {
     return serializableMessageTranslator;
   }
 
-  public void setSerializableMessageTranslator(DefaultSerializableMessageTranslator serializableMessageTranslator) {
-    this.serializableMessageTranslator = serializableMessageTranslator;
+  void setSerializableMessageTranslator(DefaultSerializableMessageTranslator translator) {
+    this.serializableMessageTranslator = translator;
   }
 
 }
