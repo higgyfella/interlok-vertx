@@ -1,6 +1,7 @@
 package com.adaptris.vertx;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.AdaptrisMessageProducerImp;
@@ -25,6 +28,7 @@ import com.adaptris.core.ServiceException;
 import com.adaptris.core.WorkflowImp;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.services.LogMessageService;
+import com.adaptris.core.stubs.MockChannel;
 import com.adaptris.core.stubs.MockNonStandardRequestReplyProducer;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.interlok.InterlokException;
@@ -70,14 +74,13 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
   }
   
   public void tearDown() throws Exception {
-    LifecycleHelper.stop(channel);
-    LifecycleHelper.close(channel);
+    LifecycleHelper.stopAndClose(channel);
   }
   
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     
-    channel = new Channel();
+    channel = new MockChannel();
     
     vertxWorkflow = new VertxWorkflow();
     targetWorkflowId = new ConstantDataInputParameter("SomeWorkflowID");
@@ -85,12 +88,16 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     vertxWorkflow.setTargetComponentId(targetWorkflowId);    
     vertxWorkflow.setProducer(mockProducer);
     vertxWorkflow.setClusteredEventBus(mockClusteredEventBus);
+    // INTERLOK-1563 need to invoke the consumerStarted() method, to handle the countdownLatch
+    doAnswer(new Answer() {
+      public Object answer(InvocationOnMock invocation) {
+        ((ConsumerEventListener) invocation.getArguments()[0]).consumerStarted();
+        return null;
+      }
+    }).when(mockClusteredEventBus).startClusteredConsumer(vertxWorkflow);
     
     channel.getWorkflowList().add(vertxWorkflow);
-    
-    channel.prepare();
-    LifecycleHelper.init(channel);
-    LifecycleHelper.start(channel);
+    LifecycleHelper.initAndStart(channel);
   }
   
   public void testInitWithNegativeQueueCapacity() throws Exception {

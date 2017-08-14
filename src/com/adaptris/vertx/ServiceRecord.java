@@ -3,6 +3,9 @@ package com.adaptris.vertx;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
+
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("clustered-service-record")
@@ -15,12 +18,7 @@ public class ServiceRecord {
   }
   
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    for(InterlokService service : services) {
-      builder.append(service.toString());
-      builder.append("\n");
-    }
-    return builder.toString();
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("services", services).toString();
   }
 
   public void addService(InterlokService interlokService) {

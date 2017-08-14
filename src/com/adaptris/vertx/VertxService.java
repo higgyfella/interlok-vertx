@@ -108,6 +108,7 @@ public class VertxService extends ServiceImp
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ClusteredEventBus clusteredEventBus;
+  private transient ConsumerLatch latch;
   
   public VertxService() {
     super();
@@ -194,7 +195,9 @@ public class VertxService extends ServiceImp
     LifecycleHelper.start(this.getService());
     LifecycleHelper.start(this.getReplyService());
     LifecycleHelper.start(this.getReplyServiceExceptionHandler());
+    latch = ConsumerLatch.build();
     clusteredEventBus.startClusteredConsumer(this);
+    latch.waitForComplete();
   }
   
   @Override
@@ -206,6 +209,7 @@ public class VertxService extends ServiceImp
 
   @Override
   public void consumerStarted() {
+    latch.complete();
   }
 
   @Override
