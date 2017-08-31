@@ -132,6 +132,8 @@ public class VertxWorkflow extends StandardWorkflow
   
   private transient Map<String, Map<Object, Object>> objectMetadataCache;
   
+  private transient ConsumerLatch latch;
+
   public VertxWorkflow() {
     super();
     this.setMessageCodec(new AdaptrisMessageCodec());
@@ -241,11 +243,14 @@ public class VertxWorkflow extends StandardWorkflow
   @Override
   protected void startWorkflow() throws CoreException {
     super.startWorkflow();
+    latch = ConsumerLatch.build();
     clusteredEventBus.startClusteredConsumer(this);
+    latch.waitForComplete();
   }
   
   @Override
   public void consumerStarted() {
+    latch.complete();
     Runnable messageProcessorRunnable = new Runnable() {
       @Override
       public void run() {

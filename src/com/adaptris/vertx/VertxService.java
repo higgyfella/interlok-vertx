@@ -82,12 +82,6 @@ import io.vertx.core.eventbus.MessageCodec;
 public class VertxService extends ServiceImp
     implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
   
-  private static final ProcessingExceptionHandler DEFAULT_EXCEPTION_HANDLER = new NullProcessingExceptionHandler() {
-    @Override
-    public void handleProcessingException(AdaptrisMessage msg) {
-    }
-  };
-
   private String clusterId;
   
   @Valid
@@ -114,6 +108,7 @@ public class VertxService extends ServiceImp
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ClusteredEventBus clusteredEventBus;
+  private transient ConsumerLatch latch;
   
   public VertxService() {
     super();
@@ -200,7 +195,9 @@ public class VertxService extends ServiceImp
     LifecycleHelper.start(this.getService());
     LifecycleHelper.start(this.getReplyService());
     LifecycleHelper.start(this.getReplyServiceExceptionHandler());
+    latch = ConsumerLatch.build();
     clusteredEventBus.startClusteredConsumer(this);
+    latch.waitForComplete();
   }
   
   @Override
@@ -212,6 +209,7 @@ public class VertxService extends ServiceImp
 
   @Override
   public void consumerStarted() {
+    latch.complete();
   }
 
   @Override
@@ -329,7 +327,7 @@ public class VertxService extends ServiceImp
   }
 
   ProcessingExceptionHandler replyExceptionHandler() {
-    return getReplyServiceExceptionHandler() != null ? getReplyServiceExceptionHandler() : DEFAULT_EXCEPTION_HANDLER;
+    return getReplyServiceExceptionHandler() != null ? getReplyServiceExceptionHandler() : new NoOpExceptionHandler();
   }
 
   public String getClusterId() {
@@ -343,5 +341,12 @@ public class VertxService extends ServiceImp
    */
   public void setClusterId(String vertxId) {
     this.clusterId = vertxId;
+  }
+
+  // Completely no-op
+  private class NoOpExceptionHandler extends NullProcessingExceptionHandler {
+
+    public void handleProcessingException(AdaptrisMessage msg) {
+    }
   }
 }

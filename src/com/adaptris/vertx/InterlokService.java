@@ -1,5 +1,8 @@
 package com.adaptris.vertx;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
+
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("clustered-interlok-service")
@@ -57,13 +60,7 @@ public class InterlokService {
   }
   
   public String toString() {
-    StringBuilder builder = new StringBuilder();
-    builder.append("Id: " + this.getId());
-    builder.append("  :::  ");
-    builder.append("State: " + this.getState().name());
-    builder.append("  :::  ");
-    builder.append("Exception?: " + (this.getException() != null));
-    
-    return builder.toString();
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", getId()).append("state", getState().name())
+        .append("Exception", this.getException() != null).toString();
   }
 }
