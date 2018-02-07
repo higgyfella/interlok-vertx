@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import static com.adaptris.core.util.ServiceUtil.discardNulls;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -18,6 +20,7 @@ import com.adaptris.core.ProcessingExceptionHandler;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.ServiceImp;
+import com.adaptris.core.ServiceWrapper;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.licensing.License;
 import com.adaptris.core.licensing.License.LicenseType;
@@ -80,7 +83,7 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-service")
 @DisplayOrder(order = {"clusterId", "targetSendMode"})
 public class VertxService extends ServiceImp
-    implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent {
+    implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent, ServiceWrapper {
   
   private String clusterId;
   
@@ -129,7 +132,7 @@ public class VertxService extends ServiceImp
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
         try {
           if (SendMode.single(this.getTargetSendMode())) {
-            getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage);
+            getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage, getReplyService() != null);
           } else {
             getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
           }
@@ -341,6 +344,11 @@ public class VertxService extends ServiceImp
    */
   public void setClusterId(String vertxId) {
     this.clusterId = vertxId;
+  }
+
+  @Override
+  public Service[] wrappedServices() {
+    return discardNulls(getService(), getReplyService());
   }
 
   // Completely no-op

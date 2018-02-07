@@ -1,6 +1,7 @@
 package com.adaptris.vertx;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -301,7 +302,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
       vertxWorkflow.processQueuedMessage();
     } catch (Exception ex) {
     } finally {
-      verify(mockClusteredEventBus).send(any(), any());
+      verify(mockClusteredEventBus).send(any(), any(), anyBoolean());
     }
   }
   

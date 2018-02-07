@@ -34,12 +34,17 @@ class ClusteredEventBus {
     });
   }
   
-  public void send(String targetConsumer, Object message) {
-    this.getEventBus().send(targetConsumer, message, replyHandler -> {
-      if (replyHandler.succeeded()) {
-        getConsumerEventListener().handleMessageReply(replyHandler.result());
-      }
-    });
+  public void send(String targetConsumer, Object message, boolean expectReply) {
+    if (expectReply) {
+      this.getEventBus().send(targetConsumer, message, replyHandler -> {
+        if (replyHandler.succeeded()) {
+          getConsumerEventListener().handleMessageReply(replyHandler.result());
+        }
+      });
+    }
+    else {
+      this.getEventBus().send(targetConsumer, message);
+    }
   }
   
   public void publish(String targetConsumer, Object message) {
