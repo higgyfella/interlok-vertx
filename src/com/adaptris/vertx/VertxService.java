@@ -27,6 +27,7 @@ import com.adaptris.core.licensing.License.LicenseType;
 import com.adaptris.core.licensing.LicenseChecker;
 import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.LifecycleHelper;
+import com.adaptris.core.util.LoggingHelper;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -239,16 +240,16 @@ public class VertxService extends ServiceImp
     AdaptrisMessage adaptrisMessage = null;
     try {
       adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
-      log.trace("Incoming message: " + adaptrisMessage.getUniqueId());
+      log.debug("Incoming message: {} being handled by {}", adaptrisMessage.getUniqueId(), LoggingHelper.friendlyName(this));
     } catch (CoreException e) {
       log.error("Error translating incoming message.", e);
       return null;
     }
 
     Service service = this.getService();
-    if(service != null) {
+    if (service != null) {
       InterlokService interlokService = new InterlokService(service.getUniqueId());
-      
+
       try {
         service.doService(adaptrisMessage);
         interlokService.setState(ServiceState.COMPLETE);
@@ -261,9 +262,9 @@ public class VertxService extends ServiceImp
       } finally {
         vxMessage.getServiceRecord().addService(interlokService);
       }
-    } else
-      log.warn("No service configured for the vertx-service (" + this.getUniqueId() + "), therefore not processing.");
-  
+    } else {
+      log.warn("No service configured for the vertx-service ({}), not processing", LoggingHelper.friendlyName(this));
+    }
     return vxMessage;
   }
   
