@@ -275,7 +275,7 @@ public class VertxWorkflow extends StandardWorkflow
       // send it to vertx   
       try {
         if (SendMode.single(this.getTargetSendMode())) {
-          getClusteredEventBus().send(targetComponentId(xMessage), xMessage);
+          getClusteredEventBus().send(targetComponentId(xMessage), xMessage, true);
         } else {
           getClusteredEventBus().publish(targetComponentId(xMessage), xMessage);
         }

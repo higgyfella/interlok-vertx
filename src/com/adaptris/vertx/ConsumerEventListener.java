@@ -5,11 +5,12 @@ import io.vertx.core.eventbus.Message;
 
 public interface ConsumerEventListener extends Handler<Message<VertXMessage>>{
 
-  public void consumerStarted();
+  void consumerStarted();
   
-  public void handleMessageReply(Message<Object> result);
+  void handleMessageReply(Message<Object> result);
   
   String getClusterId();
 
   String getUniqueId();
+
 }
