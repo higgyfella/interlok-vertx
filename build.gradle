@@ -15,6 +15,7 @@ ext {
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.25'
 }
+
 ext.hasGraphViz = { ->
   def app = "dot"
   if (Os.isFamily(Os.FAMILY_WINDOWS)) {
