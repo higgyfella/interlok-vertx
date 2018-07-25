@@ -23,10 +23,6 @@ import com.adaptris.core.ProduceException;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.StandardWorkflow;
-import com.adaptris.core.licensing.License;
-import com.adaptris.core.licensing.License.LicenseType;
-import com.adaptris.core.licensing.LicenseChecker;
-import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
@@ -77,7 +73,6 @@ import io.vertx.core.eventbus.MessageCodec;
  * check to see if any services failed. If any services have failed then the message-error-handler will run.
  * </p>
  * 
- * @license ENTERPRISE
  * @config clustered-workflow
  * @since 3.5.0
  * @author Aaron
@@ -88,8 +83,7 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-workflow")
 @DisplayOrder(order = {"clusterId", "continueOnError", "disableDefaultMessageCount", "sendEvents", "logPayload"})
 public class VertxWorkflow extends StandardWorkflow
-    implements Handler<Message<VertXMessage>>, ConsumerEventListener,
-    LicensedComponent, ExpiryListener<VertXMessage> {
+    implements Handler<Message<VertXMessage>>, ConsumerEventListener, ExpiryListener<VertXMessage> {
   
   private static final TimeInterval DEFAULT_ITEM_EXPIRY = new TimeInterval(30L, TimeUnit.SECONDS);
   
@@ -136,9 +130,9 @@ public class VertxWorkflow extends StandardWorkflow
 
   public VertxWorkflow() {
     super();
-    this.setMessageCodec(new AdaptrisMessageCodec());
+    setMessageCodec(new AdaptrisMessageCodec());
     messageExecutor = Executors.newSingleThreadExecutor(new ManagedThreadFactory());
-    this.setTargetSendMode(SendMode.Mode.SINGLE);
+    setTargetSendMode(SendMode.Mode.SINGLE);
     clusteredEventBus = new ClusteredEventBus();
     objectMetadataCache = new HashMap<>();
   }
@@ -150,7 +144,7 @@ public class VertxWorkflow extends StandardWorkflow
       log.debug("start processing msg [{}]", msg.toString(false));      
       objectMetadataCache.put(msg.getUniqueId(), msg.getObjectHeaders()); 
       
-      VertXMessage translatedMessage = this.getVertXMessageTranslator().translate(msg);
+      VertXMessage translatedMessage = getVertXMessageTranslator().translate(msg);
       translatedMessage.setServiceRecord(new ServiceRecord());
       translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
@@ -158,11 +152,11 @@ public class VertxWorkflow extends StandardWorkflow
       processingQueue.put(translatedMessage);
       
       // If we are expecting replies, lets block the consumer until we get some replies back.
-      if (SendMode.single(this.getTargetSendMode())) {
+      if (SendMode.single(getTargetSendMode())) {
         consumerQueue.put(translatedMessage);
       }
       log.trace("New queue size : {}", processingQueue.remainingCapacity());
-      this.reportQueue("new message put [" + msg.getUniqueId() + "]");
+      reportQueue("new message put [" + msg.getUniqueId() + "]");
     } catch (CoreException e) {
       log.error("Error processing message: ", e);
       handleBadMessage(msg);
@@ -177,14 +171,14 @@ public class VertxWorkflow extends StandardWorkflow
     VertXMessage vxMessage = null;
     try {
       vxMessage = xMessage.body();
-      adaptrisMessage = this.getVertXMessageTranslator().translate(vxMessage);
+      adaptrisMessage = getVertXMessageTranslator().translate(vxMessage);
       log.trace("Incoming message: {}", adaptrisMessage.getUniqueId());
     } catch (CoreException e) {
       log.error("Error translating incoming message.", e);
       return;
     }
 
-    for(Service service : this.getServiceCollection()) {
+    for(Service service : getServiceCollection()) {
       InterlokService interlokService = new InterlokService(service.getUniqueId());
       
       try {
@@ -194,15 +188,16 @@ public class VertxWorkflow extends StandardWorkflow
         log.error("Error running service.", ex);
         interlokService.setState(ServiceState.ERROR);
         interlokService.setException(ex);
-        if(!continueOnError())
+        if(!continueOnError()) {
           break;
+        }
       } finally {
         vxMessage.getServiceRecord().addService(interlokService);
       }
     }
     
     try {
-      VertXMessage vertXMessage = this.getVertXMessageTranslator().translate(adaptrisMessage);
+      VertXMessage vertXMessage = getVertXMessageTranslator().translate(adaptrisMessage);
       vxMessage.setAdaptrisMessage(vertXMessage.getAdaptrisMessage());
       xMessage.reply(vxMessage);
     } catch (CoreException e) {
@@ -215,11 +210,13 @@ public class VertxWorkflow extends StandardWorkflow
     super.initialiseWorkflow();
     clusteredEventBus.setMessageCodec(getMessageCodec());
     
-    if (queueCapacity() <= 0)
+    if (queueCapacity() <= 0) {
       throw new CoreException("Queue capacity must be greater than 0.");
+    }
 
-    if(this.getVertXMessageTranslator() == null)
-      this.setVertXMessageTranslator(new VertXMessageTranslator());
+    if(getVertXMessageTranslator() == null) {
+      setVertXMessageTranslator(new VertXMessageTranslator());
+    }
     
     processingQueue = new ArrayBlockingQueue<>(queueCapacity(), true);
     consumerQueue = new BlockingExpiryQueue<>(queueCapacity(), true);
@@ -231,7 +228,6 @@ public class VertxWorkflow extends StandardWorkflow
 
   @Override
   protected void prepareWorkflow() throws CoreException {
-    LicenseChecker.newChecker().checkLicense(this);
     super.prepareWorkflow();
   }
 
@@ -255,7 +251,7 @@ public class VertxWorkflow extends StandardWorkflow
       @Override
       public void run() {
         boolean interrupted = false;
-        while((!messageExecutorHandle.isDone()) && (!interrupted)) {
+        while(!messageExecutorHandle.isDone() && !interrupted) {
           try {
             processQueuedMessage();
           } catch (InterruptedException e) {
@@ -271,10 +267,10 @@ public class VertxWorkflow extends StandardWorkflow
     VertXMessage xMessage = processingQueue.poll(1L, TimeUnit.SECONDS);
     
     if(xMessage != null) {
-      this.reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
+      reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
       // send it to vertx   
       try {
-        if (SendMode.single(this.getTargetSendMode())) {
+        if (SendMode.single(getTargetSendMode())) {
           getClusteredEventBus().send(targetComponentId(xMessage), xMessage, true);
         } else {
           getClusteredEventBus().publish(targetComponentId(xMessage), xMessage);
@@ -282,7 +278,7 @@ public class VertxWorkflow extends StandardWorkflow
       } catch (InterlokException exception) {
         log.error("Cannot derive the target from the incoming message.", exception);
         try {
-          this.handleBadMessage(this.getVertXMessageTranslator().translate(xMessage));
+          this.handleBadMessage(getVertXMessageTranslator().translate(xMessage));
         } catch (CoreException e) {
           log.error("Cannot translate into AdaptrisMessage: " + xMessage);
         }
@@ -295,7 +291,7 @@ public class VertxWorkflow extends StandardWorkflow
     
     AdaptrisMessage adaptrisMessage;
     try {
-      adaptrisMessage = this.getVertXMessageTranslator().translate(resultMessage);
+      adaptrisMessage = getVertXMessageTranslator().translate(resultMessage);
       moveObjectMetadata(adaptrisMessage);
     } catch (CoreException e) {
       log.error("Cannot translate the reply message back to an AdaptrisMessage", e);
@@ -333,15 +329,17 @@ public class VertxWorkflow extends StandardWorkflow
   private void moveObjectMetadata(AdaptrisMessage adaptrisMessage) {
     Map<Object, Object> cachedObjectMetadata = objectMetadataCache.get(adaptrisMessage.getUniqueId());
     if(cachedObjectMetadata != null) {
-      for (Map.Entry<Object, Object> entry : cachedObjectMetadata.entrySet())
+      for (Map.Entry<Object, Object> entry : cachedObjectMetadata.entrySet()) {
         adaptrisMessage.addObjectHeader(entry.getKey(), entry.getValue());
+      }
     }
   }
 
   @Override
   public void handle(Message<VertXMessage> event) {
-    if(event.body() != null)
-      this.onVertxMessage(event);
+    if(event.body() != null) {
+      onVertxMessage(event);
+    }
   }
   
   @Override
@@ -351,25 +349,23 @@ public class VertxWorkflow extends StandardWorkflow
   }
   
   @Override
-  public boolean isEnabled(License license) {
-    return license.isEnabled(LicenseType.Enterprise);
-  }
-  
-  @Override
   protected void stopWorkflow() {
     super.stopWorkflow();
-    if(messageExecutorHandle != null)
+    if(messageExecutorHandle != null) {
       messageExecutorHandle.cancel(false);
-    if(getClusteredEventBus().getEventBus() != null)
-      getClusteredEventBus().getEventBus().consumer(this.getUniqueId()).unregister();
+    }
+    if(getClusteredEventBus().getEventBus() != null) {
+      getClusteredEventBus().getEventBus().consumer(getUniqueId()).unregister();
+    }
   }
   
   @Override
   protected void closeWorkflow() {
     super.closeWorkflow();
     if(messageExecutorHandle != null) {
-      if(!messageExecutorHandle.isCancelled())
+      if(!messageExecutorHandle.isCancelled()) {
         messageExecutorHandle.cancel(true);
+      }
     }
   }
 
@@ -383,7 +379,7 @@ public class VertxWorkflow extends StandardWorkflow
    * @param vertxId if not configured, defaults to {@link #getUniqueId()}
    */
   public void setClusterId(String vertxId) {
-    this.clusterId = vertxId;
+    clusterId = vertxId;
   }
 
   int queueCapacity() {
@@ -415,8 +411,8 @@ public class VertxWorkflow extends StandardWorkflow
   }
   
   protected String targetComponentId(VertXMessage vertxMessage) throws InterlokException {
-    AdaptrisMessage adaptrisMessage = this.getVertXMessageTranslator().translate(vertxMessage);
-    return this.getTargetComponentId().extract(adaptrisMessage);
+    AdaptrisMessage adaptrisMessage = getVertXMessageTranslator().translate(vertxMessage);
+    return getTargetComponentId().extract(adaptrisMessage);
   }
 
   private void reportQueue(String title) {
@@ -425,7 +421,7 @@ public class VertxWorkflow extends StandardWorkflow
       builder.append("\nCurrent Queue State (" + title + "):\n");
 
       VertXMessage[] array = new VertXMessage[processingQueue.size()];
-      array = (VertXMessage[]) this.processingQueue.toArray(array);
+      array = (VertXMessage[]) processingQueue.toArray(array);
       if (array != null) {
         for (VertXMessage message : array) {
           builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
@@ -436,7 +432,7 @@ public class VertxWorkflow extends StandardWorkflow
   }
 
   protected boolean continueOnError() {
-    return this.getContinueOnError() != null ? this.getContinueOnError() : false;
+    return getContinueOnError() != null ? getContinueOnError() : false;
   }
   
   public Boolean getContinueOnError() {
