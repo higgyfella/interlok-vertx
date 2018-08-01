@@ -74,7 +74,7 @@ dependencies {
   compile ("org.slf4j:slf4j-api:$slf4jVersion")
   compile ("io.vertx:vertx-core:3.5.3")
   compile ("io.vertx:vertx-hazelcast:3.5.3")
-  compile ("com.hazelcast:hazelcast:3.10.3")
+  compile ("com.hazelcast:hazelcast:3.10.4")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.0.18")
