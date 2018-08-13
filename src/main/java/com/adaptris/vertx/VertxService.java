@@ -22,10 +22,6 @@ import com.adaptris.core.ServiceException;
 import com.adaptris.core.ServiceImp;
 import com.adaptris.core.ServiceWrapper;
 import com.adaptris.core.common.ConstantDataInputParameter;
-import com.adaptris.core.licensing.License;
-import com.adaptris.core.licensing.License.LicenseType;
-import com.adaptris.core.licensing.LicenseChecker;
-import com.adaptris.core.licensing.LicensedComponent;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.core.util.LoggingHelper;
 import com.adaptris.interlok.InterlokException;
@@ -73,7 +69,6 @@ import io.vertx.core.eventbus.MessageCodec;
  * the same unique-id as the other clustered service instances.
  * </p>
  * 
- * @license ENTERPRISE
  * @config clustered-service
  * @since 3.5.0
  * @author Aaron
@@ -84,7 +79,7 @@ import io.vertx.core.eventbus.MessageCodec;
 @XStreamAlias("clustered-service")
 @DisplayOrder(order = {"clusterId", "targetSendMode"})
 public class VertxService extends ServiceImp
-    implements Handler<Message<VertXMessage>>, ConsumerEventListener, LicensedComponent, ServiceWrapper {
+    implements Handler<Message<VertXMessage>>, ConsumerEventListener, ServiceWrapper {
   
   private String clusterId;
   
@@ -173,7 +168,6 @@ public class VertxService extends ServiceImp
 
   @Override
   public void prepare() throws CoreException {
-    LicenseChecker.newChecker().checkLicense(this);
     prepare(getService());
     prepare(getReplyService());
     prepare(getReplyServiceExceptionHandler());
@@ -229,11 +223,6 @@ public class VertxService extends ServiceImp
 
   public void setService(Service service) {
     this.service = service;
-  }
-
-  @Override
-  public boolean isEnabled(License license) {
-    return license.isEnabled(LicenseType.Enterprise);
   }
 
   private VertXMessage onVertxMessage(VertXMessage vxMessage) {
