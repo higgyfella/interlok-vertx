@@ -80,13 +80,13 @@ dependencies {
   compile ("org.slf4j:slf4j-api:$slf4jVersion")
   compile ("io.vertx:vertx-core:3.5.3")
   compile ("io.vertx:vertx-hazelcast:3.5.3")
-  compile ("com.hazelcast:hazelcast:3.10.3")
+  compile ("com.hazelcast:hazelcast:3.10.4")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
-  umlDoclet("nl.talsmasoftware:umldoclet:1.0.16")
+  umlDoclet("nl.talsmasoftware:umldoclet:1.0.18")
 
   testCompile ('junit:junit:4.12')
-  testCompile ('org.mockito:mockito-all:1.9.5')
+  testCompile ('org.mockito:mockito-all:1.10.19')
   testCompile ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
   testCompile ("org.apache.logging.log4j:log4j-core:2.8.1")
   testCompile ("org.apache.logging.log4j:log4j-1.2-api:2.8.1")
@@ -227,6 +227,7 @@ publishing {
       pom.withXml {
         asNode().appendNode("name", componentName)
         asNode().appendNode("description", "Configure Interlok to use clustered workflows and services")
+        asNode().appendNode("url", "https://development.adaptris.net/docs/Interlok/advanced-vertx.html")
         def properties = asNode().appendNode("properties")
         properties.appendNode("target", "3.5.0+")
         properties.appendNode("tags", "vertx,clustered")
