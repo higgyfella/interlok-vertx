@@ -61,6 +61,12 @@ configurations {
   all*.exclude group: 'commons-logging'
   all*.exclude group: 'javamail'
   all*.exclude group: 'javax.mail', module: 'mail'
+  all*.exclude group: 'org.glassfish.hk2.external'
+  all*.exclude group: 'xalan', module: 'xalan'
+  all*.exclude group: 'net.sf.saxon', module: 'saxon'
+  all*.exclude group: 'org.codehaus.woodstox'
+  all*.exclude group: 'org.eclipse.jetty.orbit', module: 'javax.mail.glassfish'
+  all*.exclude group: 'com.fasterxml.woodstox'
 }
 
 configurations.all {
