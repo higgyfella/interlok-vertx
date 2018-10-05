@@ -61,6 +61,12 @@ configurations {
   all*.exclude group: 'commons-logging'
   all*.exclude group: 'javamail'
   all*.exclude group: 'javax.mail', module: 'mail'
+  all*.exclude group: 'org.glassfish.hk2.external'
+  all*.exclude group: 'xalan', module: 'xalan'
+  all*.exclude group: 'net.sf.saxon', module: 'saxon'
+  all*.exclude group: 'org.codehaus.woodstox'
+  all*.exclude group: 'org.eclipse.jetty.orbit', module: 'javax.mail.glassfish'
+  all*.exclude group: 'com.fasterxml.woodstox'
 }
 
 configurations.all {
@@ -74,7 +80,7 @@ dependencies {
   compile ("org.slf4j:slf4j-api:$slf4jVersion")
   compile ("io.vertx:vertx-core:3.5.3")
   compile ("io.vertx:vertx-hazelcast:3.5.3")
-  compile ("com.hazelcast:hazelcast:3.10.4")
+  compile ("com.hazelcast:hazelcast:3.10.5")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.0.18")
