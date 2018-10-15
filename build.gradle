@@ -87,8 +87,8 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.hazelcast:hazelcast:3.10.5")
   compile ("com.fasterxml.jackson.core:jackson-databind:2.9.7")
+  compile ("com.hazelcast:hazelcast:3.10.6")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.0")
