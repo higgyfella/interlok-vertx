@@ -81,9 +81,14 @@ dependencies {
   compile ("com.adaptris:interlok-common:$interlokCoreVersion") { changing= true}
   compile ("com.adaptris:interlok-core-apt:$interlokCoreVersion") { changing= true}
   compile ("org.slf4j:slf4j-api:$slf4jVersion")
-  compile ("io.vertx:vertx-core:$vertxVersion")
-  compile ("io.vertx:vertx-hazelcast:$vertxVersion")
+  compile ("io.vertx:vertx-core:$vertxVersion") {
+    exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+  }
+  compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
+    exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+  }
   compile ("com.hazelcast:hazelcast:3.10.5")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.9.7")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.0")
