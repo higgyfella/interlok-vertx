@@ -3,17 +3,20 @@ import org.apache.tools.ant.taskdefs.condition.Os
 ext {
   interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.8-SNAPSHOT'
   releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.8-SNAPSHOT'
-  mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : 'https://development.adaptris.net/nexus/content/repositories/snapshots'
+  nexusBaseUrl = project.hasProperty('nexusBaseUrl') ? project.getProperty('nexusBaseUrl') : 'https://nexus.adaptris.net/nexus'
+  mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : nexusBaseUrl + '/content/repositories/snapshots'
+  javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
   repoUsername = project.hasProperty('repoUsername') ? project.getProperty('repoUsername') : 'unknown'
   repoPassword = project.hasProperty('repoPassword') ? project.getProperty('repoPassword') : 'unknown'
   defaultNexusRepo = project.hasProperty('defaultNexusRepo') ? project.getProperty('defaultNexusRepo') : 'https://repo1.maven.org/maven2/'
-  javadocsBaseUrl = "https://development.adaptris.net/nexus/content/sites/javadocs/com/adaptris"
   interlokJavadocs= project.hasProperty('interlokJavadocs') ? project.getProperty('interlokJavadocs') : javadocsBaseUrl + "/interlok-core/" + interlokCoreVersion
   interlokCommonJavadocs= project.hasProperty('interlokJavadocs') ? project.getProperty('interlokJavadocs') : javadocsBaseUrl + "/interlok-common/" + interlokCoreVersion
   componentName='Interlok/VertX'
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.25'
+  vertxVersion = '3.5.4'
+  log4j2Version = '2.9.1'
 }
 
 ext.hasGraphViz = { ->
@@ -46,11 +49,11 @@ def versionDir = "$buildDir/version"
 
 // In this section you declare where to find the dependencies of your project
 repositories {
-  jcenter()
+  mavenCentral()
   maven { url "$defaultNexusRepo" }
-  maven { url "https://development.adaptris.net/nexus/content/groups/public" }
-  maven { url "https://development.adaptris.net/nexus/content/repositories/snapshots" }
-  maven { url "https://development.adaptris.net/nexus/content/repositories/releases" }
+  maven { url "$nexusBaseUrl/content/groups/public" }
+  maven { url "$nexusBaseUrl/content/repositories/snapshots" }
+  maven { url "$nexusBaseUrl/content/repositories/releases" }
 }
 
 
@@ -78,20 +81,24 @@ dependencies {
   compile ("com.adaptris:interlok-common:$interlokCoreVersion") { changing= true}
   compile ("com.adaptris:interlok-core-apt:$interlokCoreVersion") { changing= true}
   compile ("org.slf4j:slf4j-api:$slf4jVersion")
-  compile ("io.vertx:vertx-core:3.5.3")
-  compile ("io.vertx:vertx-hazelcast:3.5.3")
-  compile ("com.hazelcast:hazelcast:3.10.5")
+  compile ("io.vertx:vertx-core:$vertxVersion") {
+    exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+  }
+  compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
+    exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+  }
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.9.7")
+  compile ("com.hazelcast:hazelcast:3.11")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
-  umlDoclet("nl.talsmasoftware:umldoclet:1.0.18")
+  umlDoclet("nl.talsmasoftware:umldoclet:1.1.2")
 
   testCompile ('junit:junit:4.12')
   testCompile ('org.mockito:mockito-all:1.10.19')
   testCompile ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
-  testCompile ("org.apache.logging.log4j:log4j-core:2.8.1")
-  testCompile ("org.apache.logging.log4j:log4j-1.2-api:2.8.1")
-  testCompile ("org.apache.logging.log4j:log4j-slf4j-impl:2.8.1")
-  testCompile ("org.apache.logging.log4j:log4j-api:2.8.1")
+  testCompile ("org.apache.logging.log4j:log4j-core:$log4j2Version")
+  testCompile ("org.apache.logging.log4j:log4j-1.2-api:$log4j2Version")
+  testCompile ("org.apache.logging.log4j:log4j-api:$log4j2Version")
 
   javadoc("com.adaptris:interlok-core-apt:$interlokCoreVersion") { changing= true}
 
@@ -227,7 +234,7 @@ publishing {
       pom.withXml {
         asNode().appendNode("name", componentName)
         asNode().appendNode("description", "Configure Interlok to use clustered workflows and services")
-        asNode().appendNode("url", "https://development.adaptris.net/docs/Interlok/advanced-vertx.html")
+        asNode().appendNode("url", "https://interlok.adaptris.net/interlok-docs/advanced-vertx.html")
         def properties = asNode().appendNode("properties")
         properties.appendNode("target", "3.5.0+")
         properties.appendNode("tags", "vertx,clustered")

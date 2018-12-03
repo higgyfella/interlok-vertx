@@ -14,19 +14,15 @@ import io.vertx.core.eventbus.MessageCodec;
 
 @XStreamAlias("clustered-adaptris-message-codec")
 public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMessage> {
-  
+
   protected transient Logger log = LoggerFactory.getLogger(this.getClass().getName());
-  
+
   private static final String CODEC_NAME = "AdaptrisVertXMessageCodec";
-  
+
   private AdaptrisMarshaller marshaller;
 
   public AdaptrisMessageCodec() {
-    try {
-      marshaller = new XStreamJsonMarshaller();
-    } catch (CoreException e) {
-      e.printStackTrace();
-    }
+    marshaller = new XStreamJsonMarshaller();
   }
 
   @Override
@@ -71,5 +67,5 @@ public class AdaptrisMessageCodec implements MessageCodec<VertXMessage, VertXMes
   public void setMarshaller(AdaptrisMarshaller marshaller) {
     this.marshaller = marshaller;
   }
-  
+
 }
