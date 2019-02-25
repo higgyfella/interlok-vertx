@@ -1,5 +1,13 @@
 import org.apache.tools.ant.taskdefs.condition.Os
-
+plugins {
+  id 'java'
+  id 'maven'
+  id 'maven-publish'
+  id 'jacoco'
+  // Manage optional dependencies in maven pom.
+  id 'nebula.optional-base' version '4.0.1'
+  id 'com.github.spotbugs' version '1.6.10'
+}
 ext {
   interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.8-SNAPSHOT'
   releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.8-SNAPSHOT'
@@ -236,8 +244,6 @@ artifacts {
 }
 
 
-check.dependsOn jacocoTestReport
-javadoc.dependsOn offlinePackageList,umlJavadoc
 
 publishing {
   publications {
@@ -269,3 +275,27 @@ publishing {
     }
   }
 }
+
+spotbugs {
+  // showProgress = "true"
+  effort = "max"
+  // Ignore failures?
+  // ignoreFailures = false
+
+  // We only care about "high priority" issues...
+  reportLevel = "high"
+  includeFilter = new File("$rootDir/gradle/spotbugs-filter.xml")
+}
+
+// disable spotbugsTests which checks our test code..
+spotbugsTest.enabled = false
+
+tasks.withType(com.github.spotbugs.SpotBugsTask) {
+  reports {
+    xml.enabled = false
+    html.enabled = true
+  }
+}
+
+check.dependsOn jacocoTestReport
+javadoc.dependsOn offlinePackageList,umlJavadoc
