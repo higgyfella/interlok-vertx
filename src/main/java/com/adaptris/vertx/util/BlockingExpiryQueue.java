@@ -34,7 +34,7 @@ public class BlockingExpiryQueue<T> extends ArrayBlockingQueue<T> {
   
   private transient List<ExpiryListener<T>> expiryListeners;
   
-  private TimeInterval expiryTimeout;
+  private transient TimeInterval expiryTimeout;
 
   public BlockingExpiryQueue(int capacity) {
     this(capacity, true);

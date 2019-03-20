@@ -1,8 +1,8 @@
 package com.adaptris.vertx;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
-
 import com.adaptris.core.SerializableAdaptrisMessage;
+import com.adaptris.util.GuidGenerator;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("clustered-message")
@@ -16,8 +16,14 @@ public class VertXMessage {
   
   public VertXMessage() {
     serviceRecord = new ServiceRecord();
+    adaptrisMessage = new SerializableAdaptrisMessage(new GuidGenerator().getUUID());
   }
   
+  public VertXMessage(SerializableAdaptrisMessage msg) {
+    this();
+    setAdaptrisMessage(msg);
+  }
+
   public SerializableAdaptrisMessage getAdaptrisMessage() {
     return adaptrisMessage;
   }
@@ -42,6 +48,7 @@ public class VertXMessage {
     this.startProcessingTime = startProcessingTime;
   }
   
+  @Override
   public String toString() {
     StringBuilder builder = new StringBuilder();
     builder.append("Start processing at :" + this.getStartProcessingTime());
@@ -56,15 +63,21 @@ public class VertXMessage {
    * If the unique id's are the same then equals will return true.
    * @see java.lang.Object#equals(java.lang.Object)
    */
+  @Override
   public boolean equals(Object object) {
-    if(!(object instanceof VertXMessage))
-      return false;
-    else {
+    if (object == this)
+      return true;
+    if (object instanceof VertXMessage) {
       VertXMessage otherInstance = (VertXMessage) object;
       return new EqualsBuilder()
             .append(this.getAdaptrisMessage().getUniqueId(), otherInstance.getAdaptrisMessage().getUniqueId())
             .isEquals();
     }
+    return false;
   }
 
+  @Override
+  public int hashCode() {
+    return this.getAdaptrisMessage().getUniqueId().hashCode();
+  }
 }
