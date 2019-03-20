@@ -1,7 +1,6 @@
 package com.adaptris.vertx;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
-
 import com.adaptris.core.SerializableAdaptrisMessage;
 import com.adaptris.util.GuidGenerator;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -20,6 +19,11 @@ public class VertXMessage {
     adaptrisMessage = new SerializableAdaptrisMessage(new GuidGenerator().getUUID());
   }
   
+  public VertXMessage(SerializableAdaptrisMessage msg) {
+    this();
+    setAdaptrisMessage(msg);
+  }
+
   public SerializableAdaptrisMessage getAdaptrisMessage() {
     return adaptrisMessage;
   }

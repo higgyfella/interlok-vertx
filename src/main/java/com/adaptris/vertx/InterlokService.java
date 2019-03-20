@@ -2,7 +2,7 @@ package com.adaptris.vertx;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
-
+import com.adaptris.util.GuidGenerator;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 @XStreamAlias("clustered-interlok-service")
@@ -13,7 +13,7 @@ public class InterlokService {
   private Exception exception;
   
   public InterlokService() {
-    // no arg for marshalling
+    this(new GuidGenerator().getUUID());
   }
   
   public InterlokService(String id) {
@@ -65,7 +65,8 @@ public class InterlokService {
   
   @Override
   public String toString() {
-    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", getId()).append("state", getState().name())
+    return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE).append("id", getId())
+        .append("state", getState().name())
         .append("Exception", this.getException() != null).toString();
   }
 }
