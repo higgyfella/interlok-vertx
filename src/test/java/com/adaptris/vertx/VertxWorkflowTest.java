@@ -172,6 +172,19 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  public void testReceivedHandleVertxMessage() throws Exception {
+    AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
+    VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
+    
+    when(mockVertxMessage.body())
+        .thenReturn(vertXMessage);
+    
+    vertxWorkflow.handle(mockVertxMessage);
+    
+    Thread.sleep(500l);
+    verify(mockVertxMessage).reply(vertXMessage);
+  }
+  
   public void testReceivedVertxMessageFailsTranslate() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
