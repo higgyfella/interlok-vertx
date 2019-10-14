@@ -369,7 +369,7 @@ public class VertxWorkflow extends StandardWorkflow
   @Override
   protected void closeWorkflow() {
     super.closeWorkflow();
-    this.getExecutorService().shutdown();
+    ManagedThreadFactory.shutdownQuietly(this.getExecutorService(), 30000l);
     
     if(messageExecutorHandle != null) {
       if(!messageExecutorHandle.isCancelled()) {
@@ -496,11 +496,11 @@ public class VertxWorkflow extends StandardWorkflow
     return getItemExpiryTimeout() != null ? getItemExpiryTimeout() : DEFAULT_ITEM_EXPIRY;
   }
 
-  public ExecutorService getExecutorService() {
+  ExecutorService getExecutorService() {
     return executorService;
   }
 
-  public void setExecutorService(ExecutorService executorService) {
+  void setExecutorService(ExecutorService executorService) {
     this.executorService = executorService;
   }
   

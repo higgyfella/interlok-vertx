@@ -29,6 +29,7 @@ import com.adaptris.core.ServiceWrapper;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.core.util.LoggingHelper;
+import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
 import com.adaptris.util.NumberUtils;
@@ -225,7 +226,7 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     LifecycleHelper.close(this.getReplyService());
     LifecycleHelper.close(this.getReplyServiceExceptionHandler());
     
-    this.getExecutorService().shutdown();
+    ManagedThreadFactory.shutdownQuietly(this.getExecutorService(), 30000l);
   }
 
   public Service getService() {
@@ -365,11 +366,11 @@ public class VertxService extends ServiceImp implements Handler<Message<VertXMes
     }
   }
 
-  public ExecutorService getExecutorService() {
+  ExecutorService getExecutorService() {
     return executorService;
   }
 
-  public void setExecutorService(ExecutorService executorService) {
+  void setExecutorService(ExecutorService executorService) {
     this.executorService = executorService;
   }
   
