@@ -2,6 +2,11 @@ package com.adaptris.vertx;
 
 import static com.adaptris.core.util.ServiceUtil.discardNulls;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -24,8 +29,10 @@ import com.adaptris.core.ServiceWrapper;
 import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.core.util.LoggingHelper;
+import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
+import com.adaptris.util.NumberUtils;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 
 import io.vertx.core.Handler;
@@ -78,8 +85,9 @@ import io.vertx.core.eventbus.MessageCodec;
 @ComponentProfile(summary = "Allows clustered single service processing.", tag = "service,clustering,vertx")
 @XStreamAlias("clustered-service")
 @DisplayOrder(order = {"clusterId", "targetSendMode"})
-public class VertxService extends ServiceImp
-    implements Handler<Message<VertXMessage>>, ConsumerEventListener, ServiceWrapper {
+public class VertxService extends ServiceImp implements Handler<Message<VertXMessage>>, ConsumerEventListener, ServiceWrapper {
+  
+  private static final int DEFAULT_MAX_THREADS = 10;
   
   private String clusterId;
   
@@ -109,13 +117,17 @@ public class VertxService extends ServiceImp
   private transient ClusteredEventBus clusteredEventBus;
   private transient ConsumerLatch latch;
   
+  private transient ExecutorService executorService;
+  
+  private Integer maxThreads;
+  
   public VertxService() {
     super();
     this.setMessageCodec(new AdaptrisMessageCodec());
     this.setTargetSendMode(SendMode.Mode.SINGLE);
     this.setTargetComponentId(new ConstantDataInputParameter());
-    clusteredEventBus = new ClusteredEventBus();
-    clusteredEventBus.setMessageCodec(getMessageCodec());
+    this.setClusteredEventBus(new ClusteredEventBus());
+    this.getClusteredEventBus().setMessageCodec(getMessageCodec());
   }
 
   @Override
@@ -126,14 +138,10 @@ public class VertxService extends ServiceImp
       translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
       if((this.getTargetComponentId() != null) && (!StringUtils.isEmpty(this.getTargetComponentId().extract(msg)))) {
-        try {
-          if (SendMode.single(this.getTargetSendMode())) {
-            getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage, getReplyService() != null);
-          } else {
-            getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
-          }
-        } catch (InterlokException exception) {
-          throw new ServiceException("Cannot derive the target from the incoming message.", exception);
+        if (SendMode.single(this.getTargetSendMode())) {
+          getClusteredEventBus().send(getTargetComponentId().extract(msg), translatedMessage, getReplyService() != null);
+        } else {
+          getClusteredEventBus().publish(getTargetComponentId().extract(msg), translatedMessage);
         }
       } else {
         this.onVertxMessage(translatedMessage);
@@ -182,6 +190,8 @@ public class VertxService extends ServiceImp
   @Override
   protected void initService() throws CoreException {
     if (this.getVertXMessageTranslator() == null) this.setVertXMessageTranslator(new VertXMessageTranslator());
+    
+    this.setExecutorService(new ThreadPoolExecutor(1, maxThreads(), 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()));
     clusteredEventBus.setMessageCodec(getMessageCodec());
     LifecycleHelper.init(this.getService());
     LifecycleHelper.init(this.getReplyService());
@@ -215,6 +225,8 @@ public class VertxService extends ServiceImp
     LifecycleHelper.close(this.getService());
     LifecycleHelper.close(this.getReplyService());
     LifecycleHelper.close(this.getReplyServiceExceptionHandler());
+    
+    ManagedThreadFactory.shutdownQuietly(this.getExecutorService(), 30000l);
   }
 
   public Service getService() {
@@ -259,8 +271,14 @@ public class VertxService extends ServiceImp
   
   @Override
   public void handle(Message<VertXMessage> event) {
-    VertXMessage vertXMessage = this.onVertxMessage(event.body());
-    event.reply(vertXMessage);
+    this.getExecutorService().submit(new Runnable() {
+      
+      @Override
+      public void run() {
+        VertXMessage vertXMessage = onVertxMessage(event.body());
+        event.reply(vertXMessage);
+      }
+    });
   }
 
   public VertXMessageTranslator getVertXMessageTranslator() {
@@ -346,5 +364,25 @@ public class VertxService extends ServiceImp
 
     public void handleProcessingException(AdaptrisMessage msg) {
     }
+  }
+
+  ExecutorService getExecutorService() {
+    return executorService;
+  }
+
+  void setExecutorService(ExecutorService executorService) {
+    this.executorService = executorService;
+  }
+  
+  protected int maxThreads() {
+    return NumberUtils.toIntDefaultIfNull(getMaxThreads(), DEFAULT_MAX_THREADS);
+  }
+
+  public Integer getMaxThreads() {
+    return maxThreads;
+  }
+
+  public void setMaxThreads(Integer maxThreads) {
+    this.maxThreads = maxThreads;
   }
 }

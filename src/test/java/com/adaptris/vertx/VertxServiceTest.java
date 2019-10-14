@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import org.awaitility.Awaitility;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -25,6 +26,7 @@ import com.adaptris.core.common.ConstantDataInputParameter;
 import com.adaptris.core.services.LogMessageService;
 import com.adaptris.core.util.LifecycleHelper;
 import com.adaptris.interlok.InterlokException;
+import com.adaptris.interlok.config.DataInputParameter;
 
 import io.vertx.core.eventbus.Message;
 
@@ -50,6 +52,8 @@ public class VertxServiceTest extends ServiceCase {
   private Message<Object> mockVertxReplyMessage;
   @Mock
   private ProcessingExceptionHandler mockProcessingExceptionHandler;
+  @Mock
+  private DataInputParameter<String> mockDataInputParameter;
 
   public VertxServiceTest(String name) {
     super(name);
@@ -62,6 +66,8 @@ public class VertxServiceTest extends ServiceCase {
     vertxService.setService(wrappedService);
     vertxService.setReplyService(replyService);
     vertxService.setClusteredEventBus(mockClusteredEventBus);
+    vertxService.setMaxThreads(5);
+    vertxService.setClusterId("myCluster");
     // INTERLOK-1563 need to invoke the consumerStarted() method, to handle the countdownLatch
     doAnswer(new Answer() {
       public Object answer(InvocationOnMock invocation) {
@@ -113,6 +119,22 @@ public class VertxServiceTest extends ServiceCase {
     }
   }
   
+  public void testDoServiceTargetFails() throws Exception {
+    AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
+    
+    doThrow(new InterlokException("expected"))
+        .when(mockDataInputParameter).extract(adaptrisMessage);
+    
+    vertxService.setTargetComponentId(mockDataInputParameter);
+    
+    try {
+      vertxService.doService(adaptrisMessage);
+      fail("Exception expected");
+    } catch (InterlokException ex) {
+      // expected
+    }
+  }
+  
   public void testDoServiceNoSendEndpoint() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -135,6 +157,8 @@ public class VertxServiceTest extends ServiceCase {
         .when(wrappedService).doService(any(AdaptrisMessage.class));
 
     vertxService.handle(mockVertxMessage);
+    
+    Awaitility.await().until(() -> vertXMessage.getServiceRecord().getServices().size() > 0);
     
     assertEquals(ServiceState.ERROR, vertXMessage.getServiceRecord().getServices().get(0).getState());
   }

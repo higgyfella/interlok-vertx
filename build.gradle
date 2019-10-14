@@ -25,7 +25,7 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.28'
-  vertxVersion = '3.5.4'
+  vertxVersion = '3.8.2'
   log4j2Version = '2.12.1'
 }
 
@@ -98,13 +98,14 @@ dependencies {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
   compile ("com.fasterxml.jackson.core:jackson-databind:2.10.0")
-  compile ("com.hazelcast:hazelcast:3.12.1")
+  compile ("com.hazelcast:hazelcast:3.12.3")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
   testCompile ('junit:junit:4.12')
   testCompile ('org.mockito:mockito-all:1.10.19')
+  testCompile ('org.awaitility:awaitility:4.0.1')
   testCompile ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
   testCompile ("org.apache.logging.log4j:log4j-core:$log4j2Version")
   testCompile ("org.apache.logging.log4j:log4j-1.2-api:$log4j2Version")

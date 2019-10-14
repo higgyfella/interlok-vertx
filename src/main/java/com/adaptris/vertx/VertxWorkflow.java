@@ -6,6 +6,8 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import javax.validation.Valid;
@@ -19,13 +21,13 @@ import com.adaptris.annotation.DisplayOrder;
 import com.adaptris.annotation.InputFieldDefault;
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
-import com.adaptris.core.ProduceException;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
 import com.adaptris.core.StandardWorkflow;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
+import com.adaptris.util.NumberUtils;
 import com.adaptris.util.TimeInterval;
 import com.adaptris.vertx.util.BlockingExpiryQueue;
 import com.adaptris.vertx.util.ExpiryListener;
@@ -85,6 +87,8 @@ import io.vertx.core.eventbus.MessageCodec;
 public class VertxWorkflow extends StandardWorkflow
     implements Handler<Message<VertXMessage>>, ConsumerEventListener, ExpiryListener<VertXMessage> {
   
+  private static final int DEFAULT_MAX_THREADS = 10;
+  
   private static final TimeInterval DEFAULT_ITEM_EXPIRY = new TimeInterval(30L, TimeUnit.SECONDS);
   
   private static final int DEFAULT_QUEUE_SIZE = 10;
@@ -127,6 +131,10 @@ public class VertxWorkflow extends StandardWorkflow
   private transient Map<String, Map<Object, Object>> objectMetadataCache;
   
   private transient ConsumerLatch latch;
+  
+  private transient ExecutorService executorService;
+  
+  private Integer maxThreads;
 
   public VertxWorkflow() {
     super();
@@ -141,21 +149,21 @@ public class VertxWorkflow extends StandardWorkflow
   public void onAdaptrisMessage(AdaptrisMessage msg) {
     try {
       workflowStart(msg);
-      log.debug("start processing msg [{}]", msg.toString(false));      
+      log.debug("start processing msg [{}]", msg);      
       objectMetadataCache.put(msg.getUniqueId(), msg.getObjectHeaders()); 
       
       VertXMessage translatedMessage = getVertXMessageTranslator().translate(msg);
       translatedMessage.setServiceRecord(new ServiceRecord());
       translatedMessage.setStartProcessingTime(System.currentTimeMillis());
       
-      log.trace("New message [{}]::: Queue slots available: {}", msg.getUniqueId(), processingQueue.remainingCapacity());
-      processingQueue.put(translatedMessage);
+      log.trace("New message [{}]::: Queue slots available: {}", msg.getUniqueId(), getProcessingQueue().remainingCapacity());
+      getProcessingQueue().put(translatedMessage);
       
       // If we are expecting replies, lets block the consumer until we get some replies back.
       if (SendMode.single(getTargetSendMode())) {
         consumerQueue.put(translatedMessage);
       }
-      log.trace("New queue size : {}", processingQueue.remainingCapacity());
+      log.trace("New queue size : {}", getProcessingQueue().remainingCapacity());
       reportQueue("new message put [" + msg.getUniqueId() + "]");
     } catch (CoreException e) {
       log.error("Error processing message: ", e);
@@ -210,6 +218,8 @@ public class VertxWorkflow extends StandardWorkflow
     super.initialiseWorkflow();
     clusteredEventBus.setMessageCodec(getMessageCodec());
     
+    this.setExecutorService(new ThreadPoolExecutor(1, maxThreads(), 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>()));
+    
     if (queueCapacity() <= 0) {
       throw new CoreException("Queue capacity must be greater than 0.");
     }
@@ -218,7 +228,7 @@ public class VertxWorkflow extends StandardWorkflow
       setVertXMessageTranslator(new VertXMessageTranslator());
     }
     
-    processingQueue = new ArrayBlockingQueue<>(queueCapacity(), true);
+    setProcessingQueue(new ArrayBlockingQueue<>(queueCapacity(), true));
     consumerQueue = new BlockingExpiryQueue<>(queueCapacity(), true);
     consumerQueue.setExpiryTimeout(itemExpiryTimeout());
     consumerQueue.registerExpiryListener(this);
@@ -229,11 +239,6 @@ public class VertxWorkflow extends StandardWorkflow
   @Override
   protected void prepareWorkflow() throws CoreException {
     super.prepareWorkflow();
-  }
-
-  @Override
-  protected void resubmitMessage(AdaptrisMessage msg) {
-    super.resubmitMessage(msg);
   }
 
   @Override
@@ -264,7 +269,7 @@ public class VertxWorkflow extends StandardWorkflow
   }
 
   void processQueuedMessage() throws InterruptedException {
-    VertXMessage xMessage = processingQueue.poll(1L, TimeUnit.SECONDS);
+    VertXMessage xMessage = getProcessingQueue().poll(1L, TimeUnit.SECONDS);
     
     if(xMessage != null) {
       reportQueue("after a get [" + xMessage.getAdaptrisMessage().getUniqueId() + "]");
@@ -312,9 +317,7 @@ public class VertxWorkflow extends StandardWorkflow
       try {
         doProduce(adaptrisMessage);
         logSuccess(adaptrisMessage, resultMessage.getStartProcessingTime());
-      } catch (ServiceException e) {
-        handleBadMessage("Exception from ServiceCollection", e, adaptrisMessage);
-      } catch (ProduceException e) {
+      } catch (Exception e) {
         adaptrisMessage.addEvent(getProducer(), false); // generate event
         handleBadMessage("Exception producing msg", e, adaptrisMessage);
         handleProduceException();
@@ -337,9 +340,13 @@ public class VertxWorkflow extends StandardWorkflow
 
   @Override
   public void handle(Message<VertXMessage> event) {
-    if(event.body() != null) {
-      onVertxMessage(event);
-    }
+    this.getExecutorService().submit(new Runnable() {
+      
+      @Override
+      public void run() {
+        onVertxMessage(event);
+      }
+    });
   }
   
   @Override
@@ -362,6 +369,8 @@ public class VertxWorkflow extends StandardWorkflow
   @Override
   protected void closeWorkflow() {
     super.closeWorkflow();
+    ManagedThreadFactory.shutdownQuietly(this.getExecutorService(), 30000l);
+    
     if(messageExecutorHandle != null) {
       if(!messageExecutorHandle.isCancelled()) {
         messageExecutorHandle.cancel(true);
@@ -420,8 +429,8 @@ public class VertxWorkflow extends StandardWorkflow
       StringBuilder builder = new StringBuilder();
       builder.append("\nCurrent Queue State (" + title + "):\n");
 
-      VertXMessage[] array = new VertXMessage[processingQueue.size()];
-      array = (VertXMessage[]) processingQueue.toArray(array);
+      VertXMessage[] array = new VertXMessage[getProcessingQueue().size()];
+      array = (VertXMessage[]) getProcessingQueue().toArray(array);
       if (array != null) {
         for (VertXMessage message : array) {
           builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
@@ -485,6 +494,26 @@ public class VertxWorkflow extends StandardWorkflow
 
   TimeInterval itemExpiryTimeout() {
     return getItemExpiryTimeout() != null ? getItemExpiryTimeout() : DEFAULT_ITEM_EXPIRY;
+  }
+
+  ExecutorService getExecutorService() {
+    return executorService;
+  }
+
+  void setExecutorService(ExecutorService executorService) {
+    this.executorService = executorService;
+  }
+  
+  protected int maxThreads() {
+    return NumberUtils.toIntDefaultIfNull(getMaxThreads(), DEFAULT_MAX_THREADS);
+  }
+
+  public Integer getMaxThreads() {
+    return maxThreads;
+  }
+
+  public void setMaxThreads(Integer maxThreads) {
+    this.maxThreads = maxThreads;
   }
 
 }
