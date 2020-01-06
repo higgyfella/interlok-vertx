@@ -6,7 +6,7 @@ plugins {
   id 'jacoco'
   // Manage optional dependencies in maven pom.
   id 'nebula.optional-base' version '5.0.3'
-  id 'com.github.spotbugs' version '2.0.0'
+  id 'com.github.spotbugs' version '3.0.0'
 }
 ext {
   interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.9-SNAPSHOT'
@@ -24,8 +24,8 @@ ext {
   componentName='Interlok/VertX'
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
-  slf4jVersion = '1.7.28'
-  vertxVersion = '3.8.2'
+  slf4jVersion = '1.7.29'
+  vertxVersion = '3.8.4'
   log4j2Version = '2.12.1'
 }
 
@@ -45,6 +45,24 @@ if (JavaVersion.current().isJava8Compatible()) {
       options.addStringOption('Xdoclint:none', '-quiet')
     }
   }
+}
+ext.gitBranchNameOrTimestamp = { branchName ->
+  if (branchName.equals("HEAD") || branchName.equals("develop") || branchName.startsWith("release")) {
+    return new Date().format('HH:mm:ss z');
+  }
+  return branchName;
+}
+
+ext.buildInfo = { ->
+   new ByteArrayOutputStream().withStream { os ->
+      exec {
+        executable = "git"
+        args = ["rev-parse", "--abbrev-ref", "HEAD"]
+        standardOutput = os
+      }
+      def branchName = os.toString().replaceAll("\r", "").replaceAll("\n", "").trim();
+      return gitBranchNameOrTimestamp(branchName);
+    }
 }
 
 apply plugin: 'java'
@@ -97,8 +115,8 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.10.0")
-  compile ("com.hazelcast:hazelcast:3.12.3")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.10.1")
+  compile ("com.hazelcast:hazelcast:3.12.4")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
@@ -147,6 +165,7 @@ task generateVersion {
       entry(key: 'artifactId', value: project.name)
       entry(key: 'build.version', value: releaseVersion)
       entry(key: 'build.date', value: new Date().format('yyyy-MM-dd'))
+      entry(key: 'build.info', value: buildInfo())
     }
   }
 }
@@ -174,10 +193,6 @@ javadoc {
     options.addStringOption "tagletpath", configurations.javadoc.asPath
 
   }
-}
-
-jacoco {
-  toolVersion="0.8.3"
 }
 
 jacocoTestReport {
