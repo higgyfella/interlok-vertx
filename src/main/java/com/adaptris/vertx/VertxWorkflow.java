@@ -116,6 +116,10 @@ public class VertxWorkflow extends StandardWorkflow
   @Valid
   private TimeInterval itemExpiryTimeout;
   
+  @AdvancedConfig
+  @Valid
+  private VertxProperties vertxProperties;
+  
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
@@ -245,7 +249,7 @@ public class VertxWorkflow extends StandardWorkflow
   protected void startWorkflow() throws CoreException {
     super.startWorkflow();
     latch = ConsumerLatch.build();
-    clusteredEventBus.startClusteredConsumer(this);
+    clusteredEventBus.startClusteredConsumer(this, this.getVertxProperties());
     latch.waitForComplete();
   }
   
@@ -514,6 +518,14 @@ public class VertxWorkflow extends StandardWorkflow
 
   public void setMaxThreads(Integer maxThreads) {
     this.maxThreads = maxThreads;
+  }
+
+  public VertxProperties getVertxProperties() {
+    return vertxProperties;
+  }
+
+  public void setVertxProperties(VertxProperties vertxProperties) {
+    this.vertxProperties = vertxProperties;
   }
 
 }

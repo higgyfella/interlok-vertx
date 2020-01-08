@@ -11,6 +11,9 @@ import static org.mockito.Mockito.when;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -74,10 +77,12 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     super(name);
   }
   
+  @After
   public void tearDown() throws Exception {
     LifecycleHelper.stopAndClose(channel);
   }
   
+  @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     
@@ -89,18 +94,21 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     vertxWorkflow.setTargetComponentId(targetWorkflowId);    
     vertxWorkflow.setProducer(mockProducer);
     vertxWorkflow.setClusteredEventBus(mockClusteredEventBus);
+    vertxWorkflow.setMaxThreads(5);
+    vertxWorkflow.setVertxProperties(null);
     // INTERLOK-1563 need to invoke the consumerStarted() method, to handle the countdownLatch
-    doAnswer(new Answer() {
+    doAnswer(new Answer<Object>() {
       public Object answer(InvocationOnMock invocation) {
         ((ConsumerEventListener) invocation.getArguments()[0]).consumerStarted();
         return null;
       }
-    }).when(mockClusteredEventBus).startClusteredConsumer(vertxWorkflow);
+    }).when(mockClusteredEventBus).startClusteredConsumer(vertxWorkflow, null);
     
     channel.getWorkflowList().add(vertxWorkflow);
     LifecycleHelper.initAndStart(channel);
   }
   
+  @Test
   public void testInitWithNegativeQueueCapacity() throws Exception {
     vertxWorkflow.setQueueCapacity(-1);
     
@@ -112,6 +120,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     }
   }
   
+  @Test
   public void testOnMessageInterrupted() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -126,12 +135,14 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testOnMessageSendToCluster() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
     vertxWorkflow.onAdaptrisMessage(adaptrisMessage);
   }
   
+  @Test
   public void testOnMessageCannotTranslateMessage() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -146,6 +157,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockErrorHandler).handleProcessingException(adaptrisMessage);
   }
   
+  @Test
   public void testOnMessageInterruptedException() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -160,6 +172,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockErrorHandler).handleProcessingException(adaptrisMessage);
   }
   
+  @Test
   public void testReceivedVertxMessage() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -172,6 +185,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedHandleVertxMessage() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -185,6 +199,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedVertxMessageFailsTranslate() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -201,6 +216,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage, never()).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedVertxMessageFailsTranslateWhenReplying() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -219,6 +235,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage, never()).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedVertxMessageRunsServices() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -236,6 +253,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedVertxMessageRunsServicesFirstServiceError() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -256,6 +274,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  @Test
   public void testReceivedVertxMessageRunsServicesFirstServiceErrorContinueOnError() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -278,6 +297,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockVertxMessage).reply(vertXMessage);
   }
   
+  @Test
   public void testOnMessageTargetFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -301,6 +321,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     }
   }
   
+  @Test
   public void testOnMessageSendToSingle() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -319,6 +340,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     }
   }
   
+  @Test
   public void testOnMessageSendToAll() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -326,7 +348,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     ArrayBlockingQueue<VertXMessage> internalprocessingQueue = new ArrayBlockingQueue<>(1);
     internalprocessingQueue.put(vertXMessage);
     
-    vertxWorkflow.setTargetSendMode(SendMode.Mode.all);
+    vertxWorkflow.setTargetSendMode(SendMode.Mode.ALL);
     vertxWorkflow.setProcessingQueue(internalprocessingQueue);
     vertxWorkflow.getClusteredEventBus().setEventBus(mockEventBus);
     
@@ -338,6 +360,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     }
   }
   
+  @Test
   public void testHandleMessageReplyFailsTranslator() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -355,6 +378,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockProducer, never()).produce(adaptrisMessage);
   }
   
+  @Test
   public void testHandleMessageReplyHasErrors() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -370,6 +394,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testHandleMessageReplyDoesProduce() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -385,6 +410,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockProducer).produce(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testHandleMessageReplyProduceFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -405,6 +431,7 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     verify(mockErrorHandler).handleProcessingException(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testObjectMetadataCopy() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     adaptrisMessage.addObjectHeader("ObjectHeaderKey", "ObjectHeaderValue");

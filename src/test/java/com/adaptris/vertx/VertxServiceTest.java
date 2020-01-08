@@ -9,6 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.awaitility.Awaitility;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
@@ -59,6 +62,7 @@ public class VertxServiceTest extends ServiceCase {
     super(name);
   }
   
+  @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     
@@ -68,13 +72,14 @@ public class VertxServiceTest extends ServiceCase {
     vertxService.setClusteredEventBus(mockClusteredEventBus);
     vertxService.setMaxThreads(5);
     vertxService.setClusterId("myCluster");
+    vertxService.setVertxProperties(null);
     // INTERLOK-1563 need to invoke the consumerStarted() method, to handle the countdownLatch
-    doAnswer(new Answer() {
+    doAnswer(new Answer<Object>() {
       public Object answer(InvocationOnMock invocation) {
         ((ConsumerEventListener) invocation.getArguments()[0]).consumerStarted();
         return null;
       }
-    }).when(mockClusteredEventBus).startClusteredConsumer(vertxService);
+    }).when(mockClusteredEventBus).startClusteredConsumer(vertxService, null);
 
     targetComponentId = new ConstantDataInputParameter("SomeWorkflowID");
     vertxService.setTargetComponentId(targetComponentId);
@@ -82,10 +87,12 @@ public class VertxServiceTest extends ServiceCase {
     LifecycleHelper.initAndStart(vertxService);
   }
   
+  @After
   public void tearDown() throws Exception {
     LifecycleHelper.stopAndClose(vertxService);
   }
 
+  @Test
   public void testDoServiceSend() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -94,6 +101,7 @@ public class VertxServiceTest extends ServiceCase {
     verify(mockClusteredEventBus).send(any(), any(), anyBoolean());
   }
   
+  @Test
   public void testDoServicePublish() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -103,6 +111,7 @@ public class VertxServiceTest extends ServiceCase {
     verify(mockClusteredEventBus).publish(any(), any());
   }
   
+  @Test
   public void testDoServiceTranslateFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -119,6 +128,7 @@ public class VertxServiceTest extends ServiceCase {
     }
   }
   
+  @Test
   public void testDoServiceTargetFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -135,6 +145,7 @@ public class VertxServiceTest extends ServiceCase {
     }
   }
   
+  @Test
   public void testDoServiceNoSendEndpoint() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     
@@ -146,6 +157,7 @@ public class VertxServiceTest extends ServiceCase {
 
   }
   
+  @Test
   public void testReceiveMessageServiceFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -163,6 +175,7 @@ public class VertxServiceTest extends ServiceCase {
     assertEquals(ServiceState.ERROR, vertXMessage.getServiceRecord().getServices().get(0).getState());
   }
   
+  @Test
   public void testReceiveMessageTranslateFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -180,6 +193,7 @@ public class VertxServiceTest extends ServiceCase {
     verify(wrappedService, never()).doService(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testReceiveReplyMessageTranslateFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -197,6 +211,7 @@ public class VertxServiceTest extends ServiceCase {
     verify(replyService, never()).doService(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testReceiveReplyMessageRunsReplyService() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
@@ -209,6 +224,7 @@ public class VertxServiceTest extends ServiceCase {
     verify(replyService).doService(any(AdaptrisMessage.class));
   }
   
+  @Test
   public void testReceiveReplyMessageRunsReplyServiceFails() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage();
     VertXMessage vertXMessage = new VertXMessageTranslator().translate(adaptrisMessage);
