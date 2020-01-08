@@ -1,24 +1,29 @@
 package com.adaptris.vertx.util;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+
 import java.util.concurrent.TimeUnit;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.never;
 
 import com.adaptris.util.TimeInterval;
 
-import junit.framework.TestCase;
-
-public class BlockingExpiryQueueTest extends TestCase {
+public class BlockingExpiryQueueTest {
   
   private BlockingExpiryQueue<String> blockingExpiryQueue;
   
   @Mock
   private ExpiryListener<String> mockExpiryListener;
   
+  @Before
   public void setUp() throws Exception {
     MockitoAnnotations.initMocks(this);
     blockingExpiryQueue = new BlockingExpiryQueue<>(3);
@@ -26,10 +31,12 @@ public class BlockingExpiryQueueTest extends TestCase {
     blockingExpiryQueue.setExpiryTimeout(new TimeInterval(100L, TimeUnit.MILLISECONDS));
   }
   
+  @After
   public void tearDown() throws Exception {
     
   }
   
+  @Test
   public void testPutAndRetrieve() throws Exception {
     blockingExpiryQueue.put("1");
     blockingExpiryQueue.put("2");
@@ -44,6 +51,7 @@ public class BlockingExpiryQueueTest extends TestCase {
     verify(mockExpiryListener, never()).itemExpired("1");
   }
   
+  @Test
   public void testExpireHead() throws Exception {
     blockingExpiryQueue.put("1");
     blockingExpiryQueue.put("2");
