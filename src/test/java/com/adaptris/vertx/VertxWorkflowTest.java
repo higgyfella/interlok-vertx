@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -72,10 +74,6 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
   private AdaptrisMessageProducerImp mockProducer;
   @Mock
   private ArrayBlockingQueue<VertXMessage> mockInternalprocessingQueue;
-
-  public VertxWorkflowTest(String name) {
-    super(name);
-  }
   
   @After
   public void tearDown() throws Exception {
@@ -106,6 +104,11 @@ public class VertxWorkflowTest extends ExampleWorkflowCase {
     
     channel.getWorkflowList().add(vertxWorkflow);
     LifecycleHelper.initAndStart(channel);
+  }
+  
+  @Override
+  public boolean isAnnotatedForJunit4() {
+    return true;
   }
   
   @Test

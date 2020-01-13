@@ -1,5 +1,7 @@
 package com.adaptris.vertx;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -57,10 +59,6 @@ public class VertxServiceTest extends ServiceCase {
   private ProcessingExceptionHandler mockProcessingExceptionHandler;
   @Mock
   private DataInputParameter<String> mockDataInputParameter;
-
-  public VertxServiceTest(String name) {
-    super(name);
-  }
   
   @Before
   public void setUp() throws Exception {
@@ -90,6 +88,11 @@ public class VertxServiceTest extends ServiceCase {
   @After
   public void tearDown() throws Exception {
     LifecycleHelper.stopAndClose(vertxService);
+  }
+  
+  @Override
+  public boolean isAnnotatedForJunit4() {
+    return true;
   }
 
   @Test
