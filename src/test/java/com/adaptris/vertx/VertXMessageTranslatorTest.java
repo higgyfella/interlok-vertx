@@ -1,24 +1,33 @@
 package com.adaptris.vertx;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import com.adaptris.core.AdaptrisMessage;
 import com.adaptris.core.CoreException;
 import com.adaptris.core.DefaultMessageFactory;
 import com.adaptris.core.SerializableAdaptrisMessage;
 
-import junit.framework.TestCase;
-
-public class VertXMessageTranslatorTest extends TestCase {
+public class VertXMessageTranslatorTest {
 
   private VertXMessageTranslator messageTranslator;
   
+  @Before
   public void setUp() throws Exception {
     messageTranslator = new VertXMessageTranslator();
   }
   
+  @After
   public void tearDown() throws Exception {
     
   }
   
+  @Test
   public void testTranslateFromAdaptrisMessage() throws Exception {
     AdaptrisMessage adaptrisMessage = DefaultMessageFactory.getDefaultInstance().newMessage("Test Payload");
     adaptrisMessage.addMessageHeader("header1", "value1");
@@ -34,6 +43,7 @@ public class VertXMessageTranslatorTest extends TestCase {
     assertEquals("value3", translatedVertxMessage.getAdaptrisMessage().getMetadataValue("header3"));
   }
   
+  @Test
   public void testTranslateFromVertxMessage() throws Exception {
     VertXMessage vertXMessage = new VertXMessage();
     SerializableAdaptrisMessage serializedMessage = new SerializableAdaptrisMessage();
@@ -54,6 +64,7 @@ public class VertXMessageTranslatorTest extends TestCase {
     assertEquals("value3", adaptrisMessage.getMetadataValue("header3"));
   }
   
+  @Test
   public void testTranslatorNoSerializableTranslatorSet() throws Exception {
     VertXMessage vertXMessage = new VertXMessage();
     SerializableAdaptrisMessage serializedMessage = new SerializableAdaptrisMessage();
@@ -74,6 +85,7 @@ public class VertXMessageTranslatorTest extends TestCase {
     }
   }
   
+  @Test
   public void testTranslatorNoVertxMessage() throws Exception {
     VertXMessage vertXMessage = null;
     
