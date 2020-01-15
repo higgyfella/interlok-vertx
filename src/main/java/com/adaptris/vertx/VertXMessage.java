@@ -1,6 +1,6 @@
 package com.adaptris.vertx;
 
-import org.apache.commons.lang.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.EqualsBuilder;
 import com.adaptris.core.SerializableAdaptrisMessage;
 import com.adaptris.util.GuidGenerator;
 import com.thoughtworks.xstream.annotations.XStreamAlias;

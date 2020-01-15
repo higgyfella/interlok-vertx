@@ -1,6 +1,6 @@
 package com.adaptris.vertx;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
