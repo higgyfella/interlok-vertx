@@ -9,10 +9,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
+import java.util.function.Consumer;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-
 import com.adaptris.annotation.AdapterComponent;
 import com.adaptris.annotation.AdvancedConfig;
 import com.adaptris.annotation.AutoPopulated;
@@ -20,10 +19,11 @@ import com.adaptris.annotation.ComponentProfile;
 import com.adaptris.annotation.DisplayOrder;
 import com.adaptris.annotation.InputFieldDefault;
 import com.adaptris.core.AdaptrisMessage;
+import com.adaptris.core.AdaptrisMessageListener;
 import com.adaptris.core.CoreException;
 import com.adaptris.core.Service;
 import com.adaptris.core.ServiceException;
-import com.adaptris.core.StandardWorkflow;
+import com.adaptris.core.StandardWorkflowImpl;
 import com.adaptris.core.util.ManagedThreadFactory;
 import com.adaptris.interlok.InterlokException;
 import com.adaptris.interlok.config.DataInputParameter;
@@ -32,15 +32,21 @@ import com.adaptris.util.TimeInterval;
 import com.adaptris.vertx.util.BlockingExpiryQueue;
 import com.adaptris.vertx.util.ExpiryListener;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
-
 import io.vertx.core.Handler;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.MessageCodec;
 
 /**
- * <p>
  * A clustered workflow that allows you to farm out the service-list processing to a random instance of this workflow in your
- * cluster.<br/>
+ * cluster.
+ * 
+ * <p>
+ * Since there are no guarantees about which instance will process the message, this workflow will not support the new
+ * {@link AdaptrisMessageListener#onAdaptrisMessage(AdaptrisMessage, Consumer)} method; <strong>any callbacks requested by the
+ * consumer will be ignored</strong>
+ * </p>
+ * 
+ * <p>
  * Clusters are managed and discovered by Hazelcast. To create a cluster you simply need to have multiple instances of this workflow
  * either in different channels or different instances of Interlok with the same vertx-id on each instance of the workflow.It is
  * recommended that you explicitly configure {@link #setClusterId(String)}; if it is not expliclty configured, then we default to
@@ -84,7 +90,7 @@ import io.vertx.core.eventbus.MessageCodec;
 @ComponentProfile(summary = "A workflow that allows clustered processing of services.", tag = "workflow,clustering,vertx")
 @XStreamAlias("clustered-workflow")
 @DisplayOrder(order = {"clusterId", "continueOnError", "disableDefaultMessageCount", "sendEvents", "logPayload"})
-public class VertxWorkflow extends StandardWorkflow
+public class VertxWorkflow extends StandardWorkflowImpl
     implements Handler<Message<VertXMessage>>, ConsumerEventListener, ExpiryListener<VertXMessage> {
   
   private static final int DEFAULT_MAX_THREADS = 10;
@@ -116,6 +122,10 @@ public class VertxWorkflow extends StandardWorkflow
   @Valid
   private TimeInterval itemExpiryTimeout;
   
+  @AdvancedConfig
+  @Valid
+  private VertxProperties vertxProperties;
+  
   private transient MessageCodec<VertXMessage, VertXMessage> messageCodec;
   
   private transient ArrayBlockingQueue<VertXMessage> processingQueue;
@@ -145,8 +155,7 @@ public class VertxWorkflow extends StandardWorkflow
     objectMetadataCache = new HashMap<>();
   }
   
-  @Override
-  public void onAdaptrisMessage(AdaptrisMessage msg) {
+  private void queueMessage(AdaptrisMessage msg) {
     try {
       workflowStart(msg);
       log.debug("start processing msg [{}]", msg);      
@@ -174,6 +183,20 @@ public class VertxWorkflow extends StandardWorkflow
     }
   }
   
+
+  @Override
+  public void onAdaptrisMessage(AdaptrisMessage msg, Consumer<AdaptrisMessage> success) {
+    // Since we ultimately change the message into one that's "serializable"
+    // we won't add the callback.
+    // ListenerCallbackHelper.prepare(msg, success);
+    queueMessage(msg);
+  }
+
+  @Override
+  protected void resubmitMessage(AdaptrisMessage msg) {
+    queueMessage(msg);
+  }
+
   public void onVertxMessage(Message<VertXMessage> xMessage) {
     AdaptrisMessage adaptrisMessage = null;
     VertXMessage vxMessage = null;
@@ -245,7 +268,7 @@ public class VertxWorkflow extends StandardWorkflow
   protected void startWorkflow() throws CoreException {
     super.startWorkflow();
     latch = ConsumerLatch.build();
-    clusteredEventBus.startClusteredConsumer(this);
+    clusteredEventBus.startClusteredConsumer(this, this.getVertxProperties());
     latch.waitForComplete();
   }
   
@@ -291,6 +314,7 @@ public class VertxWorkflow extends StandardWorkflow
     }
   }
   
+  @Override
   public void handleMessageReply(Message<Object> result) {
     VertXMessage resultMessage = (VertXMessage) result.body();
     
@@ -378,6 +402,7 @@ public class VertxWorkflow extends StandardWorkflow
     }
   }
 
+  @Override
   public String getClusterId() {
     return clusterId;
   }
@@ -430,7 +455,7 @@ public class VertxWorkflow extends StandardWorkflow
       builder.append("\nCurrent Queue State (" + title + "):\n");
 
       VertXMessage[] array = new VertXMessage[getProcessingQueue().size()];
-      array = (VertXMessage[]) getProcessingQueue().toArray(array);
+      array = getProcessingQueue().toArray(array);
       if (array != null) {
         for (VertXMessage message : array) {
           builder.append("\t" + message.getAdaptrisMessage().getUniqueId() + "\n");
@@ -514,6 +539,14 @@ public class VertxWorkflow extends StandardWorkflow
 
   public void setMaxThreads(Integer maxThreads) {
     this.maxThreads = maxThreads;
+  }
+
+  public VertxProperties getVertxProperties() {
+    return vertxProperties;
+  }
+
+  public void setVertxProperties(VertxProperties vertxProperties) {
+    this.vertxProperties = vertxProperties;
   }
 
 }

@@ -9,8 +9,8 @@ plugins {
   id 'com.github.spotbugs' version '3.0.0'
 }
 ext {
-  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.9-SNAPSHOT'
-  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.9-SNAPSHOT'
+  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.10-SNAPSHOT'
+  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.10-SNAPSHOT'
   nexusBaseUrl = project.hasProperty('nexusBaseUrl') ? project.getProperty('nexusBaseUrl') : 'https://nexus.adaptris.net/nexus'
   mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : nexusBaseUrl + '/content/repositories/snapshots'
   javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
@@ -24,9 +24,10 @@ ext {
   componentName='Interlok/VertX'
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
-  slf4jVersion = '1.7.29'
-  vertxVersion = '3.8.4'
-  log4j2Version = '2.12.1'
+  slf4jVersion = '1.7.30'
+  vertxVersion = '3.8.5'
+  log4j2Version = '2.13.0'
+  junitVersion = '4.13'
 }
 
 ext.hasGraphViz = { ->
@@ -115,15 +116,15 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.10.1")
-  compile ("com.hazelcast:hazelcast:3.12.4")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.10.2")
+  compile ("com.hazelcast:hazelcast:4.0")
 
   annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
-  testCompile ('junit:junit:4.12')
+  testCompile ("junit:junit:$junitVersion")
   testCompile ('org.mockito:mockito-all:1.10.19')
-  testCompile ('org.awaitility:awaitility:4.0.1')
+  testCompile ('org.awaitility:awaitility:4.0.2')
   testCompile ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
   testCompile ("org.apache.logging.log4j:log4j-core:$log4j2Version")
   testCompile ("org.apache.logging.log4j:log4j-1.2-api:$log4j2Version")

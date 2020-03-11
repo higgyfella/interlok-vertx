@@ -1,11 +1,10 @@
 package com.adaptris.vertx;
 
-import static org.apache.commons.lang.StringUtils.isEmpty;
+import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.eventbus.MessageCodec;
 
@@ -18,10 +17,10 @@ class ClusteredEventBus {
   private transient Vertx vertX;
   
   private transient EventBus eventBus;
-  
-  public void startClusteredConsumer(ConsumerEventListener listener) {
+    
+  public void startClusteredConsumer(ConsumerEventListener listener, VertxProperties vertxOptions) {
     setConsumerEventListener(listener);
-    Vertx.clusteredVertx(new VertxOptions(), new Handler<AsyncResult<Vertx>>() {
+    Vertx.clusteredVertx(new VertxPropertyBuilder().build(vertxOptions), new Handler<AsyncResult<Vertx>>() {
       @Override
       public void handle(AsyncResult<Vertx> event) {
         vertX = event.result();
@@ -36,7 +35,7 @@ class ClusteredEventBus {
   
   public void send(String targetConsumer, Object message, boolean expectReply) {
     if (expectReply) {
-      this.getEventBus().send(targetConsumer, message, replyHandler -> {
+      this.getEventBus().request(targetConsumer, message, replyHandler -> {
         if (replyHandler.succeeded()) {
           getConsumerEventListener().handleMessageReply(replyHandler.result());
         }
@@ -78,4 +77,5 @@ class ClusteredEventBus {
   String vertxId(ConsumerEventListener c) {
     return !isEmpty(c.getClusterId()) ? c.getClusterId() : c.getUniqueId();
   }
+
 }
