@@ -26,7 +26,6 @@ ext {
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.30'
   vertxVersion = '3.9.0'
-  log4j2Version = '2.13.2'
   junitVersion = '4.13'
 }
 
@@ -126,16 +125,19 @@ dependencies {
   compile ("com.fasterxml.jackson.core:jackson-databind:2.11.0")
   compile ("com.hazelcast:hazelcast:4.0.1")
 
-  annotationProcessor ("com.adaptris:interlok-common:$interlokCoreVersion") {changing= true}
+  annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
   testCompile ("junit:junit:$junitVersion")
   testCompile ('org.mockito:mockito-all:1.10.19')
   testCompile ('org.awaitility:awaitility:4.0.2')
-  testCompile ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
-  testCompile ("org.apache.logging.log4j:log4j-core:$log4j2Version")
-  testCompile ("org.apache.logging.log4j:log4j-1.2-api:$log4j2Version")
-  testCompile ("org.apache.logging.log4j:log4j-api:$log4j2Version")
+  testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
+  // exclude any log4j dependencies so that we can just use slf4j simple.
+  // works around INTERLOk-3233
+  testCompile "com.adaptris:interlok-stubs:$interlokCoreVersion", {
+    changing= true
+    exclude group: "org.apache.logging.log4j"
+  }
 
   javadoc("com.adaptris:interlok-core-apt:$interlokCoreVersion") { changing= true}
   offlineJavadocPackages ("com.adaptris:interlok-core:$interlokCoreVersion:javadoc@jar") { changing= true}
