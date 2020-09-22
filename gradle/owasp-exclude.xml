@@ -10,4 +10,18 @@
    <cve>CVE-2016-10750</cve>
    <cpe>cpe:/a:hazelcast:hazelcast</cpe>
 </suppress>
+<suppress>
+   <notes><![CDATA[
+   file name: hazelcast-4.0.2.jar shades com.fasterxml.jackson so we can't do anything about this.
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-core@.*$</packageUrl>
+   <cve>CVE-2020-24616</cve>
+</suppress>
+<suppress>
+   <notes><![CDATA[
+   file name: hazelcast-4.0.2.jar shades org.snakeyaml:snakeyaml-engine:1.0 so there is nothing we can do about this.
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/org\.snakeyaml/snakeyaml\-engine@.*$</packageUrl>
+   <cve>CVE-2017-18640</cve>
+</suppress>
 </suppressions>

@@ -6,13 +6,13 @@ plugins {
   id 'jacoco'
   // Manage optional dependencies in maven pom.
   id 'nebula.optional-base' version '5.0.3'
-  id 'com.github.spotbugs' version '4.2.3'
+  id 'com.github.spotbugs' version '4.5.0'
   id 'org.owasp.dependencycheck' version '5.3.2.1'
 
 }
 ext {
-  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.10-SNAPSHOT'
-  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.10-SNAPSHOT'
+  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.11-SNAPSHOT'
+  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.11-SNAPSHOT'
   nexusBaseUrl = project.hasProperty('nexusBaseUrl') ? project.getProperty('nexusBaseUrl') : 'https://nexus.adaptris.net/nexus'
   mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : nexusBaseUrl + '/content/repositories/snapshots'
   javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
@@ -27,7 +27,7 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.30'
-  vertxVersion = '3.9.1'
+  vertxVersion = '3.9.2'
   junitVersion = '4.13'
 }
 
@@ -124,14 +124,14 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.11.0")
-  compile ("com.hazelcast:hazelcast:4.0.1")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.11.2")
+  compile ("com.hazelcast:hazelcast:4.0.2")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
   testCompile ("junit:junit:$junitVersion")
-  testCompile ('org.mockito:mockito-all:1.10.19')
+  testCompile ("org.mockito:mockito-all:1.10.19")
   testCompile ('org.awaitility:awaitility:4.0.3')
   testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
   // exclude any log4j dependencies so that we can just use slf4j simple.
