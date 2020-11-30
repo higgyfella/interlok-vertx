@@ -5,9 +5,11 @@
    file name: vertx-hazelcast-3.9.0.jar
    We have an explicit dependency on com.hazelcast:hazelcast:4.0.1 so this is a false positive.
    vertx-hazelcast != hazelcast:hazelcast so it should be classed as that identifier either.
+   CVE-2019-17640 Checking https://bugs.eclipse.org/bugs/show_bug.cgi?id=567416; this is a FP; since it's fixed in 3.9.4
    ]]></notes>
    <packageUrl regex="true">^pkg:maven/io\.vertx/vertx\-hazelcast@.*$</packageUrl>
    <cve>CVE-2016-10750</cve>
+   <cve>CVE-2019-17640</cve>
    <cpe>cpe:/a:hazelcast:hazelcast</cpe>
 </suppress>
 <suppress>
@@ -23,5 +25,13 @@
    ]]></notes>
    <packageUrl regex="true">^pkg:maven/org\.snakeyaml/snakeyaml\-engine@.*$</packageUrl>
    <cve>CVE-2017-18640</cve>
+</suppress>
+<suppress>
+   <notes><![CDATA[
+   file name: vertx-core-3.9.4.jar
+   CVE-2019-17640 Checking https://bugs.eclipse.org/bugs/show_bug.cgi?id=567416; this is a FP; since it's fixed in 3.9.4
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/io\.vertx/vertx\-core@.*$</packageUrl>
+   <cve>CVE-2019-17640</cve>
 </suppress>
 </suppressions>

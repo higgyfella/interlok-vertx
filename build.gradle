@@ -6,8 +6,8 @@ plugins {
   id 'jacoco'
   // Manage optional dependencies in maven pom.
   id 'nebula.optional-base' version '5.0.3'
-  id 'com.github.spotbugs' version '4.5.0'
-  id 'org.owasp.dependencycheck' version '5.3.2.1'
+  id 'com.github.spotbugs' version '4.5.1'
+  id 'org.owasp.dependencycheck' version '6.0.3'
 
 }
 ext {
@@ -27,8 +27,8 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.30'
-  vertxVersion = '3.9.2'
-  junitVersion = '4.13'
+  vertxVersion = '3.9.4'
+  junitVersion = '4.13.1'
 }
 
 ext.hasGraphViz = { ->
@@ -124,8 +124,8 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.11.2")
-  compile ("com.hazelcast:hazelcast:4.0.2")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.11.3")
+  compile ("com.hazelcast:hazelcast:4.0.3")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
