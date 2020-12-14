@@ -290,6 +290,7 @@ publishing {
         properties.appendNode("target", "3.5.0+")
         properties.appendNode("tags", "vertx,clustered")
         properties.appendNode("license", "false")
+        properties.appendNode("repository", "https://github.com/adaptris/interlok-vertx")
       }
     }
   }
