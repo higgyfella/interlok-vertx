@@ -286,7 +286,7 @@ publishing {
       pom.withXml {
         asNode().appendNode("name", componentName)
         asNode().appendNode("description", "Configure Interlok to use clustered workflows and services")
-        asNode().appendNode("url", "https://interlok.adaptris.net/interlok-docs/advanced-vertx.html")
+        asNode().appendNode("url", "https://interlok.adaptris.net/interlok-docs/#/pages/advanced/advanced-vertx")
         def properties = asNode().appendNode("properties")
         properties.appendNode("target", "3.5.0+")
         properties.appendNode("tags", "vertx,clustered")
