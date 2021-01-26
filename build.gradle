@@ -6,13 +6,13 @@ plugins {
   id 'jacoco'
   // Manage optional dependencies in maven pom.
   id 'nebula.optional-base' version '5.0.3'
-  id 'com.github.spotbugs' version '4.5.1'
-  id 'org.owasp.dependencycheck' version '6.0.3'
+  id 'com.github.spotbugs' version '4.6.0'
+  id 'org.owasp.dependencycheck' version '6.0.5'
 
 }
 ext {
-  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.11-SNAPSHOT'
-  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.11-SNAPSHOT'
+  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '3.12-SNAPSHOT'
+  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '3.12-SNAPSHOT'
   nexusBaseUrl = project.hasProperty('nexusBaseUrl') ? project.getProperty('nexusBaseUrl') : 'https://nexus.adaptris.net/nexus'
   mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : nexusBaseUrl + '/content/repositories/snapshots'
   javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
@@ -27,7 +27,7 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.30'
-  vertxVersion = '3.9.4'
+  vertxVersion = '4.0.0'
   junitVersion = '4.13.1'
 }
 
@@ -72,7 +72,8 @@ apply plugin: 'maven'
 apply plugin: 'maven-publish'
 apply plugin: "jacoco"
 
-sourceCompatibility = 1.8
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
 group   = 'com.adaptris'
 version = releaseVersion
 def versionDir = "$buildDir/version"
@@ -124,14 +125,15 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.11.3")
-  compile ("com.hazelcast:hazelcast:4.0.3")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.12.1")
+  compile ("com.hazelcast:hazelcast:4.1.1")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
   testCompile ("junit:junit:$junitVersion")
-  testCompile ("org.mockito:mockito-all:1.10.19")
+  testCompile ("org.mockito:mockito-core:3.7.0")
+  testCompile ("org.mockito:mockito-inline:3.7.0")
   testCompile ('org.awaitility:awaitility:4.0.3')
   testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
   // exclude any log4j dependencies so that we can just use slf4j simple.
@@ -284,11 +286,12 @@ publishing {
       pom.withXml {
         asNode().appendNode("name", componentName)
         asNode().appendNode("description", "Configure Interlok to use clustered workflows and services")
-        asNode().appendNode("url", "https://interlok.adaptris.net/interlok-docs/advanced-vertx.html")
+        asNode().appendNode("url", "https://interlok.adaptris.net/interlok-docs/#/pages/advanced/advanced-vertx")
         def properties = asNode().appendNode("properties")
         properties.appendNode("target", "3.5.0+")
         properties.appendNode("tags", "vertx,clustered")
         properties.appendNode("license", "false")
+        properties.appendNode("repository", "https://github.com/adaptris/interlok-vertx")
       }
     }
   }

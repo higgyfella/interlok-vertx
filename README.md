@@ -1,3 +1,3 @@
-# interlok-vertx 
+# interlok-vertx
 
 [![GitHub tag](https://img.shields.io/github/tag/adaptris/interlok-vertx.svg)](https://github.com/adaptris/interlok-vertx/tags) [![Build Status](https://travis-ci.org/adaptris/interlok-vertx.svg?branch=develop)](https://travis-ci.org/adaptris/interlok-vertx) [![CircleCI](https://circleci.com/gh/adaptris/interlok-vertx.svg?style=svg)](https://circleci.com/gh/adaptris/interlok-vertx) [![codecov](https://codecov.io/gh/adaptris/interlok-vertx/branch/develop/graph/badge.svg)](https://codecov.io/gh/adaptris/interlok-vertx) [![Total alerts](https://img.shields.io/lgtm/alerts/g/adaptris/interlok-vertx.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/adaptris/interlok-vertx/alerts/) [![Language grade: Java](https://img.shields.io/lgtm/grade/java/g/adaptris/interlok-vertx.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/adaptris/interlok-vertx/context:java)
