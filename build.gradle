@@ -23,7 +23,7 @@ ext {
 
   interlokJavadocs= project.hasProperty('interlokJavadocs') ? project.getProperty('interlokJavadocs') : javadocsBaseUrl + "/interlok-core/" + interlokCoreVersion
   interlokCommonJavadocs= project.hasProperty('interlokCommonJavadocs') ? project.getProperty('interlokCommonJavadocs') : javadocsBaseUrl + "/interlok-common/" + interlokCoreVersion
-  componentName='Interlok/VertX'
+  componentName='Interlok Labs/VertX'
   componentDesc="Configure Interlok to use clustered workflows and services"
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
@@ -76,7 +76,7 @@ apply plugin: "jacoco"
 
 sourceCompatibility = JavaVersion.VERSION_11
 targetCompatibility = JavaVersion.VERSION_11
-group   = 'com.adaptris'
+group   = 'com.adaptris.labs'
 version = releaseVersion
 def versionDir = "$buildDir/version"
 
