@@ -6,13 +6,13 @@ plugins {
   id 'jacoco'
   // Manage optional dependencies in maven pom.
   id 'nebula.optional-base' version '6.0.0'
-  id 'com.github.spotbugs' version '4.7.0'
-  id 'org.owasp.dependencycheck' version '6.1.2'
+  id 'com.github.spotbugs' version '4.7.1'
+  id 'org.owasp.dependencycheck' version '6.2.0'
 
 }
 ext {
-  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '4.0-SNAPSHOT'
-  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '4.0-SNAPSHOT'
+  interlokCoreVersion = project.hasProperty('interlokCoreVersion') ? project.getProperty('interlokCoreVersion') : '4.1-SNAPSHOT'
+  releaseVersion = project.hasProperty('releaseVersion') ? project.getProperty('releaseVersion') : '4.1-SNAPSHOT'
   nexusBaseUrl = project.hasProperty('nexusBaseUrl') ? project.getProperty('nexusBaseUrl') : 'https://nexus.adaptris.net/nexus'
   mavenPublishUrl = project.hasProperty('mavenPublishUrl') ? project.getProperty('mavenPublishUrl') : nexusBaseUrl + '/content/repositories/snapshots'
   javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
@@ -130,16 +130,16 @@ dependencies {
   compile ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  compile ("com.fasterxml.jackson.core:jackson-databind:2.12.2")
+  compile ("com.fasterxml.jackson.core:jackson-databind:2.12.3")
   compile ("com.hazelcast:hazelcast:4.1.1")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
 
   testCompile ("junit:junit:$junitVersion")
-  testCompile ("org.mockito:mockito-core:3.8.0")
-  testCompile ("org.mockito:mockito-inline:3.8.0")
-  testCompile ('org.awaitility:awaitility:4.0.3')
+  testCompile ("org.mockito:mockito-core:3.11.0")
+  testCompile ("org.mockito:mockito-inline:3.11.0")
+  testCompile ('org.awaitility:awaitility:4.1.0')
   testCompile "org.slf4j:slf4j-simple:$slf4jVersion"
   // exclude any log4j dependencies so that we can just use slf4j simple.
   // works around INTERLOk-3233
