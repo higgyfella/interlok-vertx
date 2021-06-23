@@ -28,7 +28,7 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.31'
-  vertxVersion = '4.1.0'
+  vertxVersion = '4.0.3'
   junitVersion = '4.13.2'
 }
 
@@ -131,7 +131,7 @@ dependencies {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
   compile ("com.fasterxml.jackson.core:jackson-databind:2.12.3")
-  compile ("com.hazelcast:hazelcast:4.2")
+  compile ("com.hazelcast:hazelcast:4.1.1")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
   umlDoclet("nl.talsmasoftware:umldoclet:1.1.4")
