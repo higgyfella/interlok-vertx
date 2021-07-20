@@ -28,7 +28,7 @@ ext {
   componentDesc="Configure Interlok to use clustered workflows and services"
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
-  slf4jVersion = '1.7.31'
+  slf4jVersion = '1.7.32'
   vertxVersion = '4.1.1'
   mockitoVersion = '3.11.2'
 }
