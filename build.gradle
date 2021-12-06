@@ -4,14 +4,14 @@ plugins {
   id 'maven-publish'
   id 'jacoco'
   // Manage optional dependencies in maven pom.
-  id 'nebula.optional-base' version '6.0.0'
-  id 'com.github.spotbugs' version '4.7.2'
-  id 'org.owasp.dependencycheck' version '6.2.2'
+  id 'nebula.optional-base' version '7.0.0'
+  id 'com.github.spotbugs' version '4.7.9'
+  id 'org.owasp.dependencycheck' version '6.5.0.1'
 
 }
 ext {
-  interlokCoreVersion = project.findProperty('interlokCoreVersion') ?: '4.2-SNAPSHOT'
-  releaseVersion = project.findProperty('releaseVersion') ?: '4.2-SNAPSHOT'
+  interlokCoreVersion = project.findProperty('interlokCoreVersion') ?: '4.3-SNAPSHOT'
+  releaseVersion = project.findProperty('releaseVersion') ?: '4.3-SNAPSHOT'
   nexusBaseUrl = project.findProperty('nexusBaseUrl') ?: 'https://nexus.adaptris.net/nexus'
   mavenPublishUrl = project.findProperty('mavenPublishUrl') ?: nexusBaseUrl + '/content/repositories/snapshots'
   javadocsBaseUrl = nexusBaseUrl + "/content/sites/javadocs/com/adaptris"
@@ -29,8 +29,8 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.32'
-  vertxVersion = '4.1.2'
-  mockitoVersion = '3.11.2'
+  vertxVersion = '4.2.1'
+  mockitoVersion = '4.0.0'
 }
 
 ext.hasGraphViz = { ->
@@ -139,7 +139,7 @@ dependencies {
   implementation ("io.vertx:vertx-hazelcast:$vertxVersion") {
     exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
   }
-  implementation ("com.fasterxml.jackson.core:jackson-databind:2.12.4")
+  implementation ("com.fasterxml.jackson.core:jackson-databind:2.13.0")
   implementation ("com.hazelcast:hazelcast:4.2.2")
 
   annotationProcessor ("com.adaptris:interlok-core-apt:$interlokCoreVersion") {changing= true}
@@ -150,7 +150,7 @@ dependencies {
   testImplementation ("com.adaptris:interlok-stubs:$interlokCoreVersion") { changing= true }
   testImplementation ("org.mockito:mockito-core:$mockitoVersion")
   testImplementation ("org.mockito:mockito-inline:$mockitoVersion")
-  testImplementation ('org.awaitility:awaitility:4.1.0')
+  testImplementation ('org.awaitility:awaitility:4.1.1')
 
   javadoc("com.adaptris:interlok-core-apt:$interlokCoreVersion") { changing= true}
   offlineJavadocPackages ("com.adaptris:interlok-core:$interlokCoreVersion:javadoc@jar") { changing= true}
