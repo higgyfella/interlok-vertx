@@ -1,37 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
-<suppress>
-   <notes><![CDATA[
-   file name: vertx-hazelcast-3.9.0.jar
-   We have an explicit dependency on com.hazelcast:hazelcast:4.0.1 so this is a false positive.
-   vertx-hazelcast != hazelcast:hazelcast so it should be classed as that identifier either.
-   CVE-2019-17640 Checking https://bugs.eclipse.org/bugs/show_bug.cgi?id=567416; this is a FP; since it's fixed in 3.9.4
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.vertx/vertx\-hazelcast@.*$</packageUrl>
-   <cve>CVE-2016-10750</cve>
-   <cve>CVE-2019-17640</cve>
-   <cpe>cpe:/a:hazelcast:hazelcast</cpe>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: hazelcast-4.0.2.jar shades com.fasterxml.jackson so we can't do anything about this.
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-core@.*$</packageUrl>
-   <cve>CVE-2020-24616</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: hazelcast-4.0.2.jar shades org.snakeyaml:snakeyaml-engine:1.0 so there is nothing we can do about this.
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.snakeyaml/snakeyaml\-engine@.*$</packageUrl>
-   <cve>CVE-2017-18640</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: vertx-core-3.9.4.jar
-   CVE-2019-17640 Checking https://bugs.eclipse.org/bugs/show_bug.cgi?id=567416; this is a FP; since it's fixed in 3.9.4
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.vertx/vertx\-core@.*$</packageUrl>
-   <cve>CVE-2019-17640</cve>
-</suppress>
+  <suppress>
+    <notes><![CDATA[
+    file name: netty-tcnative-classes-2.0.46.Final.jar
+    - appears to be false positive
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty\-tcnative\-classes@.*$</packageUrl>
+    <cve>CVE-2014-3488</cve>
+    <cve>CVE-2015-2156</cve>
+    <cve>CVE-2019-16869</cve>
+    <cve>CVE-2019-20444</cve>
+    <cve>CVE-2019-20445</cve>
+    <cve>CVE-2021-21290</cve>
+    <cve>CVE-2021-21295</cve>
+    <cve>CVE-2021-21409</cve>
+    <cve>CVE-2021-37136</cve>
+    <cve>CVE-2021-37137</cve>
+    <cve>CVE-2021-43797</cve>
+  </suppress>
 </suppressions>
