@@ -29,7 +29,7 @@ ext {
   organizationName = "Adaptris Ltd"
   organizationUrl = "http://interlok.adaptris.net"
   slf4jVersion = '1.7.32'
-  vertxVersion = '4.2.2'
+  vertxVersion = '4.2.3'
   mockitoVersion = '4.2.0'
 }
 
